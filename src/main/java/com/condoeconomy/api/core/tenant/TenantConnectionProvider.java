@@ -27,14 +27,14 @@ public class TenantConnectionProvider implements MultiTenantConnectionProvider {
     }
 
     @Override
-    public Connection getConnection(String tenantIdentifier) throws SQLException {
+    public Connection getConnection(Object tenantIdentifier) throws SQLException {
         Connection connection = dataSource.getConnection();
-        connection.setSchema(tenantIdentifier);
+        connection.setSchema((String) tenantIdentifier);
         return connection;
     }
 
     @Override
-    public void releaseConnection(String tenantIdentifier, Connection connection) throws SQLException {
+    public void releaseConnection(Object tenantIdentifier, Connection connection) throws SQLException {
         connection.setSchema(TenantIdentifierResolver.DEFAULT_TENANT);
         connection.close();
     }
