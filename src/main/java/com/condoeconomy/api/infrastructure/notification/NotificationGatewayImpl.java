@@ -15,7 +15,7 @@ public class NotificationGatewayImpl implements NotificationGateway {
     @Override
     public void notificarMoradoresDaUnidade(UUID unidadeId, String titulo, String mensagem) {
         // Na vida real, integraríamos com Firebase Cloud Messaging (FCM) ou WebSockets
-        log.info("🔔 DISPARO DE PUSH NOTIFICATION 🔔");
+        log.info("[DISPARO DE PUSH NOTIFICATION]");
         log.info("Destino: Unidade ID [{}]", unidadeId);
         log.info("Título: {}", titulo);
         log.info("Mensagem: {}", mensagem);

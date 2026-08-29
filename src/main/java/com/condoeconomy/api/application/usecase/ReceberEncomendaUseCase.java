@@ -36,7 +36,7 @@ public class ReceberEncomendaUseCase {
         Encomenda encomendaSalva = encomendaRepository.salvar(novaEncomenda);
 
         // 4. Dispara a notificação Push para os moradores daquela unidade
-        String titulo = "📦 Nova encomenda chegou!";
+        String titulo = "Nova encomenda chegou!";
         String mensagem = String.format("Um pacote da transportadora %s está aguardando retirada na portaria.", transportadora);
         notificationGateway.notificarMoradoresDaUnidade(unidadeId, titulo, mensagem);
 
