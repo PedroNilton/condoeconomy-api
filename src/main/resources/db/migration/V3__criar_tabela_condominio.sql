@@ -1,0 +1,8 @@
+CREATE TABLE condominio (
+    id UUID PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    cnpj VARCHAR(20) UNIQUE NOT NULL,
+    tenant_id VARCHAR(50) UNIQUE NOT NULL,
+    data_criacao TIMESTAMP NOT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE
+);
