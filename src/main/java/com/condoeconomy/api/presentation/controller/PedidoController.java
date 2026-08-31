@@ -3,6 +3,7 @@ package com.condoeconomy.api.presentation.controller;
 import com.condoeconomy.api.application.usecase.CriarPedidoUseCase;
 import com.condoeconomy.api.domain.entity.Pedido;
 import com.condoeconomy.api.presentation.dto.CriarPedidoRequestDTO;
+import com.condoeconomy.api.presentation.dto.PedidoResponseDTO;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
