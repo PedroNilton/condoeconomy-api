@@ -33,6 +33,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/condominios").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/encomendas").hasRole("PORTEIRO")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/condostore/pedidos").hasRole("MORADOR")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
