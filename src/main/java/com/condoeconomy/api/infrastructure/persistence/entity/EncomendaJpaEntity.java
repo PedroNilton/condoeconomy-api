@@ -28,6 +28,10 @@ public class EncomendaJpaEntity {
     
     private String transportadora;
     private String status;
+    private String destinatario;
+
+    @Column(name = "unidade_texto")
+    private String unidadeTexto;
     
     @Column(name = "data_recebimento")
     private LocalDateTime dataRecebimento;

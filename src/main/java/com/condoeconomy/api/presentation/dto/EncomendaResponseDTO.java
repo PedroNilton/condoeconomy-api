@@ -8,16 +8,18 @@ public record EncomendaResponseDTO(
         UUID id, 
         String codigoRastreio, 
         String transportadora, 
-        UUID unidadeId, 
+        String destinatario,
+        String unidade,
         String status, 
-        LocalDateTime dataRecebimento
+        LocalDateTime dataChegada
 ) {
     public static EncomendaResponseDTO fromEntity(Encomenda e) {
         return new EncomendaResponseDTO(
                 e.getId(),
                 e.getCodigoRastreio(),
                 e.getTransportadora(),
-                e.getUnidadeId(),
+                e.getDestinatario(),
+                e.getUnidade(),
                 e.getStatus().name(),
                 e.getDataRecebimento()
         );

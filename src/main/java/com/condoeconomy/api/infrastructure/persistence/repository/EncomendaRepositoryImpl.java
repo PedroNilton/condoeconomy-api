@@ -6,8 +6,10 @@ import com.condoeconomy.api.domain.enums.StatusEncomenda;
 import com.condoeconomy.api.infrastructure.persistence.entity.EncomendaJpaEntity;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 public class EncomendaRepositoryImpl implements EncomendaRepository {
@@ -27,7 +29,9 @@ public class EncomendaRepositoryImpl implements EncomendaRepository {
         entity.setStatus(encomenda.getStatus().name());
         entity.setDataRecebimento(encomenda.getDataRecebimento());
         entity.setDataRetirada(encomenda.getDataRetirada());
-        entity.setUnidadeId(encomenda.getUnidadeId());
+        entity.setDestinatario(encomenda.getDestinatario());
+        entity.setUnidadeTexto(encomenda.getUnidade());
+        // unidadeId is null since we use string fields for MVP
         
         springDataRepository.save(entity);
         return encomenda;
@@ -38,15 +42,22 @@ public class EncomendaRepositoryImpl implements EncomendaRepository {
         return springDataRepository.findById(id).map(this::toDomain);
     }
 
+    @Override
+    public List<Encomenda> buscarTodas() {
+        return springDataRepository.findAll().stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
     private Encomenda toDomain(EncomendaJpaEntity entity) {
         Encomenda encomenda = new Encomenda(
                 entity.getId(), 
                 entity.getCodigoRastreio(), 
                 entity.getTransportadora(), 
-                entity.getUnidadeId()
+                entity.getDestinatario(),
+                entity.getUnidadeTexto()
         );
-        // Utiliza reflexão ou construtor específico na vida real para reconstruir estado
-        // Aqui simulamos assumindo o fluxo básico.
+        
         if (StatusEncomenda.RETIRADA.name().equals(entity.getStatus())) {
             encomenda.registrarRetirada();
         }

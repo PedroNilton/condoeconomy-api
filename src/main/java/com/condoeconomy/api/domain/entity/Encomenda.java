@@ -8,19 +8,24 @@ public class Encomenda {
     private final UUID id;
     private final String codigoRastreio;
     private final String transportadora;
-    private final UUID unidadeId; // Para quem é a encomenda
+    private final String destinatario;
+    private final String unidade; // Texto livre, ex: "Apto 204"
     private StatusEncomenda status;
     private final LocalDateTime dataRecebimento;
     private LocalDateTime dataRetirada;
 
-    public Encomenda(UUID id, String codigoRastreio, String transportadora, UUID unidadeId) {
-        if (unidadeId == null) {
-            throw new IllegalArgumentException("A unidade de destino é obrigatória");
+    public Encomenda(UUID id, String codigoRastreio, String transportadora, String destinatario, String unidade) {
+        if (destinatario == null || destinatario.trim().isEmpty()) {
+            throw new IllegalArgumentException("O destinatário é obrigatório");
+        }
+        if (unidade == null || unidade.trim().isEmpty()) {
+            throw new IllegalArgumentException("A unidade é obrigatória");
         }
         this.id = id;
         this.codigoRastreio = codigoRastreio;
         this.transportadora = transportadora;
-        this.unidadeId = unidadeId;
+        this.destinatario = destinatario;
+        this.unidade = unidade;
         this.status = StatusEncomenda.AGUARDANDO_RETIRADA;
         this.dataRecebimento = LocalDateTime.now();
     }
@@ -37,7 +42,8 @@ public class Encomenda {
     public UUID getId() { return id; }
     public String getCodigoRastreio() { return codigoRastreio; }
     public String getTransportadora() { return transportadora; }
-    public UUID getUnidadeId() { return unidadeId; }
+    public String getDestinatario() { return destinatario; }
+    public String getUnidade() { return unidade; }
     public StatusEncomenda getStatus() { return status; }
     public LocalDateTime getDataRecebimento() { return dataRecebimento; }
     public LocalDateTime getDataRetirada() { return dataRetirada; }
