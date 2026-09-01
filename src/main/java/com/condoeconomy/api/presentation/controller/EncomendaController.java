@@ -2,6 +2,7 @@ package com.condoeconomy.api.presentation.controller;
 
 import com.condoeconomy.api.application.gateway.EncomendaRepository;
 import com.condoeconomy.api.application.usecase.ReceberEncomendaUseCase;
+import com.condoeconomy.api.application.usecase.RegistrarRetiradaUseCase;
 import com.condoeconomy.api.presentation.dto.EncomendaResponseDTO;
 import com.condoeconomy.api.presentation.dto.ReceberEncomendaRequestDTO;
 import jakarta.validation.Valid;
@@ -9,16 +10,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/encomendas")
 public class EncomendaController {
 
     private final ReceberEncomendaUseCase receberEncomendaUseCase;
+    private final RegistrarRetiradaUseCase registrarRetiradaUseCase;
     private final EncomendaRepository encomendaRepository;
 
-    public EncomendaController(ReceberEncomendaUseCase receberEncomendaUseCase, EncomendaRepository encomendaRepository) {
+    public EncomendaController(ReceberEncomendaUseCase receberEncomendaUseCase, 
+                               RegistrarRetiradaUseCase registrarRetiradaUseCase,
+                               EncomendaRepository encomendaRepository) {
         this.receberEncomendaUseCase = receberEncomendaUseCase;
+        this.registrarRetiradaUseCase = registrarRetiradaUseCase;
         this.encomendaRepository = encomendaRepository;
     }
 
@@ -42,5 +48,11 @@ public class EncomendaController {
         
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(EncomendaResponseDTO.fromEntity(encomenda));
+    }
+
+    @PutMapping("/{id}/retirar")
+    public ResponseEntity<EncomendaResponseDTO> registrarRetirada(@PathVariable UUID id) {
+        var encomenda = registrarRetiradaUseCase.executar(id);
+        return ResponseEntity.ok(EncomendaResponseDTO.fromEntity(encomenda));
     }
 }

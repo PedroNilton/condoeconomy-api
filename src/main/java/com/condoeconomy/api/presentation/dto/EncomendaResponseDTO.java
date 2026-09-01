@@ -11,7 +11,8 @@ public record EncomendaResponseDTO(
         String destinatario,
         String unidade,
         String status, 
-        LocalDateTime dataChegada
+        LocalDateTime dataChegada,
+        LocalDateTime dataRetirada
 ) {
     public static EncomendaResponseDTO fromEntity(Encomenda e) {
         return new EncomendaResponseDTO(
@@ -21,7 +22,8 @@ public record EncomendaResponseDTO(
                 e.getDestinatario(),
                 e.getUnidade(),
                 e.getStatus().name(),
-                e.getDataRecebimento()
+                e.getDataRecebimento(),
+                e.getDataRetirada()
         );
     }
 }
