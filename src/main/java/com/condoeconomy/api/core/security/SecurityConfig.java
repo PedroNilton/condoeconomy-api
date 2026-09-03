@@ -39,6 +39,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/condominios").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/encomendas").hasRole("PORTEIRO")
                         .requestMatchers(HttpMethod.POST, "/api/v1/condostore/pedidos").hasRole("MORADOR")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/avisos").hasRole("SINDICO")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
