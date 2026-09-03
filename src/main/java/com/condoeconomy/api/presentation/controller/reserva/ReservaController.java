@@ -1,5 +1,6 @@
 package com.condoeconomy.api.presentation.controller.reserva;
 
+import com.condoeconomy.api.application.usecase.reserva.AprovarRejeitarReservaUseCase;
 import com.condoeconomy.api.application.usecase.reserva.CheckInConvidadoUseCase;
 import com.condoeconomy.api.application.usecase.reserva.CriarReservaUseCase;
 import com.condoeconomy.api.application.usecase.reserva.ListarAreasComunsUseCase;
@@ -26,15 +27,18 @@ public class ReservaController {
     private final ListarReservasUseCase listarReservasUseCase;
     private final ListarAreasComunsUseCase listarAreasComunsUseCase;
     private final CheckInConvidadoUseCase checkInConvidadoUseCase;
+    private final AprovarRejeitarReservaUseCase aprovarRejeitarReservaUseCase;
 
     public ReservaController(CriarReservaUseCase criarReservaUseCase, 
                              ListarReservasUseCase listarReservasUseCase, 
                              ListarAreasComunsUseCase listarAreasComunsUseCase,
-                             CheckInConvidadoUseCase checkInConvidadoUseCase) {
+                             CheckInConvidadoUseCase checkInConvidadoUseCase,
+                             AprovarRejeitarReservaUseCase aprovarRejeitarReservaUseCase) {
         this.criarReservaUseCase = criarReservaUseCase;
         this.listarReservasUseCase = listarReservasUseCase;
         this.listarAreasComunsUseCase = listarAreasComunsUseCase;
         this.checkInConvidadoUseCase = checkInConvidadoUseCase;
+        this.aprovarRejeitarReservaUseCase = aprovarRejeitarReservaUseCase;
     }
 
     @GetMapping("/areas-comuns")
@@ -75,5 +79,17 @@ public class ReservaController {
             @PathVariable UUID id, @PathVariable UUID convidadoId) {
         var reserva = checkInConvidadoUseCase.executar(id, convidadoId);
         return ResponseEntity.ok(ReservaResponseDTO.fromEntity(reserva));
+    }
+
+    @PutMapping("/{id}/aprovar")
+    public ResponseEntity<Void> aprovar(@PathVariable UUID id) {
+        aprovarRejeitarReservaUseCase.aprovar(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/rejeitar")
+    public ResponseEntity<Void> rejeitar(@PathVariable UUID id) {
+        aprovarRejeitarReservaUseCase.rejeitar(id);
+        return ResponseEntity.noContent().build();
     }
 }

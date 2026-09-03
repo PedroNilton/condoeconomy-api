@@ -21,7 +21,7 @@ public class Reserva {
     private List<Convidado> convidados;
 
     public enum StatusReserva {
-        APROVADA, CANCELADA, REALIZADA
+        PENDENTE_APROVACAO, APROVADA, REJEITADA, CANCELADA, REALIZADA
     }
 
     public Reserva(UUID id, AreaComum areaComum, String unidadeTexto, String moradorSolicitante, 
@@ -43,11 +43,19 @@ public class Reserva {
     public static Reserva criar(AreaComum area, String unidade, String morador, String titulo, 
                                 LocalDate data, LocalTime inicio, LocalTime fim, List<Convidado> convidados) {
         return new Reserva(UUID.randomUUID(), area, unidade, morador, titulo, data, inicio, fim, 
-                           StatusReserva.APROVADA, LocalDateTime.now(), convidados);
+                           StatusReserva.PENDENTE_APROVACAO, LocalDateTime.now(), convidados);
     }
 
     public void cancelar() {
         this.status = StatusReserva.CANCELADA;
+    }
+
+    public void aprovar() {
+        this.status = StatusReserva.APROVADA;
+    }
+
+    public void rejeitar() {
+        this.status = StatusReserva.REJEITADA;
     }
 
     // Getters

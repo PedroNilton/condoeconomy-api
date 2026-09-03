@@ -26,4 +26,5 @@ public class ChamadoJpaEntity {
     private String status;
     private LocalDateTime dataAbertura;
     private LocalDateTime dataResolucao;
+    private boolean escaladoSindico;
 }

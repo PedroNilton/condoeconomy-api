@@ -1,6 +1,7 @@
 package com.condoeconomy.api.presentation.controller.chamado;
 
 import com.condoeconomy.api.application.usecase.chamado.AtualizarStatusChamadoUseCase;
+import com.condoeconomy.api.application.usecase.chamado.EscalarChamadoUseCase;
 import com.condoeconomy.api.application.usecase.chamado.CriarChamadoUseCase;
 import com.condoeconomy.api.application.usecase.chamado.ListarChamadosUseCase;
 import com.condoeconomy.api.domain.entity.chamado.Chamado;
@@ -22,13 +23,16 @@ public class ChamadoController {
     private final ListarChamadosUseCase listarChamadosUseCase;
     private final AtualizarStatusChamadoUseCase atualizarStatusChamadoUseCase;
     private final CriarChamadoUseCase criarChamadoUseCase;
+    private final EscalarChamadoUseCase escalarChamadoUseCase;
 
     public ChamadoController(ListarChamadosUseCase listarChamadosUseCase, 
                              AtualizarStatusChamadoUseCase atualizarStatusChamadoUseCase,
-                             CriarChamadoUseCase criarChamadoUseCase) {
+                             CriarChamadoUseCase criarChamadoUseCase,
+                             EscalarChamadoUseCase escalarChamadoUseCase) {
         this.listarChamadosUseCase = listarChamadosUseCase;
         this.atualizarStatusChamadoUseCase = atualizarStatusChamadoUseCase;
         this.criarChamadoUseCase = criarChamadoUseCase;
+        this.escalarChamadoUseCase = escalarChamadoUseCase;
     }
 
     @GetMapping
@@ -58,5 +62,11 @@ public class ChamadoController {
         Chamado.StatusChamado status = Chamado.StatusChamado.valueOf(request.novoStatus().toUpperCase());
         var chamado = atualizarStatusChamadoUseCase.executar(id, status);
         return ResponseEntity.ok(ChamadoResponseDTO.fromEntity(chamado));
+    }
+
+    @PutMapping("/{id}/escalar")
+    public ResponseEntity<Void> escalarParaSindico(@PathVariable UUID id) {
+        escalarChamadoUseCase.execute(id);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -13,13 +13,16 @@ public class Chamado {
     private StatusChamado status;
     private LocalDateTime dataAbertura;
     private LocalDateTime dataResolucao;
+    private boolean escaladoSindico;
 
     public enum StatusChamado { ABERTO, EM_ANDAMENTO, RESOLVIDO }
     public enum CategoriaChamado { RECLAMACAO, SUGESTAO, MANUTENCAO, OUTROS }
 
+    public Chamado() {} // Hibernate
+
     public Chamado(UUID id, String unidadeTexto, String moradorSolicitante, CategoriaChamado categoria, 
                    String assunto, String descricao, StatusChamado status, 
-                   LocalDateTime dataAbertura, LocalDateTime dataResolucao) {
+                   LocalDateTime dataAbertura, LocalDateTime dataResolucao, boolean escaladoSindico) {
         this.id = id;
         this.unidadeTexto = unidadeTexto;
         this.moradorSolicitante = moradorSolicitante;
@@ -29,12 +32,13 @@ public class Chamado {
         this.status = status;
         this.dataAbertura = dataAbertura;
         this.dataResolucao = dataResolucao;
+        this.escaladoSindico = escaladoSindico;
     }
 
     public static Chamado abrir(String unidadeTexto, String moradorSolicitante, 
                                 CategoriaChamado categoria, String assunto, String descricao) {
         return new Chamado(UUID.randomUUID(), unidadeTexto, moradorSolicitante, categoria, 
-                           assunto, descricao, StatusChamado.ABERTO, LocalDateTime.now(), null);
+                           assunto, descricao, StatusChamado.ABERTO, LocalDateTime.now(), null, false);
     }
 
     public void iniciarAtendimento() {
@@ -49,6 +53,10 @@ public class Chamado {
         this.dataResolucao = LocalDateTime.now();
     }
 
+    public void escalarParaSindico() {
+        this.escaladoSindico = true;
+    }
+
     // Getters
     public UUID getId() { return id; }
     public String getUnidadeTexto() { return unidadeTexto; }
@@ -59,4 +67,5 @@ public class Chamado {
     public StatusChamado getStatus() { return status; }
     public LocalDateTime getDataAbertura() { return dataAbertura; }
     public LocalDateTime getDataResolucao() { return dataResolucao; }
+    public boolean isEscaladoSindico() { return escaladoSindico; }
 }

@@ -1,0 +1,1 @@
+ALTER TABLE chamado ADD COLUMN escalado_sindico BOOLEAN DEFAULT FALSE;

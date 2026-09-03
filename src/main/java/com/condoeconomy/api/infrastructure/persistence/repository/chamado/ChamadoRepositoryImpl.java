@@ -38,12 +38,12 @@ public class ChamadoRepositoryImpl implements ChamadoRepository {
     private Chamado toDomain(ChamadoJpaEntity e) {
         return new Chamado(e.getId(), e.getUnidadeTexto(), e.getMoradorSolicitante(), 
                 Chamado.CategoriaChamado.valueOf(e.getCategoria()), e.getAssunto(), e.getDescricao(), 
-                Chamado.StatusChamado.valueOf(e.getStatus()), e.getDataAbertura(), e.getDataResolucao());
+                Chamado.StatusChamado.valueOf(e.getStatus()), e.getDataAbertura(), e.getDataResolucao(), e.isEscaladoSindico());
     }
 
     private ChamadoJpaEntity toJpa(Chamado d) {
         return new ChamadoJpaEntity(d.getId(), d.getUnidadeTexto(), d.getMoradorSolicitante(), 
                 d.getCategoria().name(), d.getAssunto(), d.getDescricao(), 
-                d.getStatus().name(), d.getDataAbertura(), d.getDataResolucao());
+                d.getStatus().name(), d.getDataAbertura(), d.getDataResolucao(), d.isEscaladoSindico());
     }
 }
