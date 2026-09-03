@@ -25,15 +25,16 @@ public class AuthController {
     }
 
     public record LoginRequestDTO(@NotBlank String email, @NotBlank String senha) {}
-    public record LoginResponseDTO(String token) {}
+    public record LoginResponseDTO(String token, String papel, String nome) {}
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid LoginRequestDTO data) {
         var usernamePassword = new UsernamePasswordAuthenticationToken(data.email(), data.senha());
         var auth = this.authenticationManager.authenticate(usernamePassword);
         
-        var token = tokenService.generateToken((UsuarioJpaEntity) auth.getPrincipal());
+        var usuario = (UsuarioJpaEntity) auth.getPrincipal();
+        var token = tokenService.generateToken(usuario);
         
-        return ResponseEntity.ok(new LoginResponseDTO(token));
+        return ResponseEntity.ok(new LoginResponseDTO(token, usuario.getPapel(), usuario.getNome()));
     }
 }

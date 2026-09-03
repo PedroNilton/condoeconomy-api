@@ -1,0 +1,2 @@
+INSERT INTO usuario (id, nome, email, senha, papel) VALUES ('a0b1c2d3-1188-467a-8b1b-b46132717088', 'Carlos Silva (Morador)', 'carlos.silva@email.com', '$2a$10$32llGM2RkI4wgwTbez56cuKZ6h9gC/u2eNcOjuXFsqdWkrlIKrSEq', 'ROLE_MORADOR');
+INSERT INTO usuario (id, nome, email, senha, papel) VALUES ('d4c3b2a1-1188-467a-8b1b-b46132717088', 'Ana Laura (Sindica)', 'sindico@condominio.com', '$2a$10$32llGM2RkI4wgwTbez56cuKZ6h9gC/u2eNcOjuXFsqdWkrlIKrSEq', 'ROLE_SINDICO');
