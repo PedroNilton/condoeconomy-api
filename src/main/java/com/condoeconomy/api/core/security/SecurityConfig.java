@@ -36,6 +36,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/condominios").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/encomendas").hasRole("PORTEIRO")
                         .requestMatchers(HttpMethod.POST, "/api/v1/condostore/pedidos").hasRole("MORADOR")

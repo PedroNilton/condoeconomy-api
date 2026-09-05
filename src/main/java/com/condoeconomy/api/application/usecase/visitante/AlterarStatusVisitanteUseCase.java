@@ -2,6 +2,7 @@ package com.condoeconomy.api.application.usecase.visitante;
 
 import com.condoeconomy.api.domain.entity.visitante.Visitante;
 import com.condoeconomy.api.infrastructure.repository.visitante.VisitanteRepository;
+import com.condoeconomy.api.application.service.NotificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,9 +12,11 @@ import java.util.UUID;
 public class AlterarStatusVisitanteUseCase {
 
     private final VisitanteRepository repository;
+    private final NotificationService notificationService;
 
-    public AlterarStatusVisitanteUseCase(VisitanteRepository repository) {
+    public AlterarStatusVisitanteUseCase(VisitanteRepository repository, NotificationService notificationService) {
         this.repository = repository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -21,7 +24,9 @@ public class AlterarStatusVisitanteUseCase {
         Visitante visitante = repository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Visitante não encontrado"));
         visitante.registrarEntrada();
-        return repository.save(visitante);
+        Visitante salvo = repository.save(visitante);
+        notificationService.notifyVisitantesUpdate();
+        return salvo;
     }
 
     @Transactional
@@ -29,6 +34,8 @@ public class AlterarStatusVisitanteUseCase {
         Visitante visitante = repository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Visitante não encontrado"));
         visitante.registrarSaida();
-        return repository.save(visitante);
+        Visitante salvo = repository.save(visitante);
+        notificationService.notifyVisitantesUpdate();
+        return salvo;
     }
 }

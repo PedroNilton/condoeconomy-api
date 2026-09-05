@@ -1,6 +1,7 @@
 package com.condoeconomy.api.application.usecase;
 
 import com.condoeconomy.api.application.gateway.EncomendaRepository;
+import com.condoeconomy.api.application.service.NotificationService;
 import com.condoeconomy.api.domain.entity.Encomenda;
 import org.springframework.stereotype.Service;
 
@@ -10,9 +11,11 @@ import java.util.UUID;
 public class RegistrarRetiradaUseCase {
 
     private final EncomendaRepository encomendaRepository;
+    private final NotificationService notificationService;
 
-    public RegistrarRetiradaUseCase(EncomendaRepository encomendaRepository) {
+    public RegistrarRetiradaUseCase(EncomendaRepository encomendaRepository, NotificationService notificationService) {
         this.encomendaRepository = encomendaRepository;
+        this.notificationService = notificationService;
     }
 
     public Encomenda executar(UUID encomendaId) {
@@ -20,6 +23,8 @@ public class RegistrarRetiradaUseCase {
                 .orElseThrow(() -> new IllegalArgumentException("Encomenda não encontrada"));
 
         encomenda.registrarRetirada();
-        return encomendaRepository.salvar(encomenda);
+        Encomenda salva = encomendaRepository.salvar(encomenda);
+        notificationService.notifyEncomendasUpdate();
+        return salva;
     }
 }

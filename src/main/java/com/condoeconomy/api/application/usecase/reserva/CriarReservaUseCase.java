@@ -1,6 +1,7 @@
 package com.condoeconomy.api.application.usecase.reserva;
 
 import com.condoeconomy.api.application.gateway.reserva.ReservaRepository;
+import com.condoeconomy.api.application.service.NotificationService;
 import com.condoeconomy.api.domain.entity.reserva.AreaComum;
 import com.condoeconomy.api.domain.entity.reserva.Convidado;
 import com.condoeconomy.api.domain.entity.reserva.Reserva;
@@ -16,9 +17,11 @@ import java.util.stream.Collectors;
 public class CriarReservaUseCase {
 
     private final ReservaRepository reservaRepository;
+    private final NotificationService notificationService;
 
-    public CriarReservaUseCase(ReservaRepository reservaRepository) {
+    public CriarReservaUseCase(ReservaRepository reservaRepository, NotificationService notificationService) {
         this.reservaRepository = reservaRepository;
+        this.notificationService = notificationService;
     }
 
     public Reserva executar(UUID areaComumId, String unidade, String morador, String titulo, 
@@ -36,7 +39,9 @@ public class CriarReservaUseCase {
                 .collect(Collectors.toList());
 
         Reserva reserva = Reserva.criar(area, unidade, morador, titulo, data, inicio, fim, convidados);
-        return reservaRepository.salvar(reserva);
+        Reserva salva = reservaRepository.salvar(reserva);
+        notificationService.notifyReservasUpdate();
+        return salva;
     }
 
     public record ConvidadoDtoInput(String nome, String documento) {}
