@@ -30,6 +30,7 @@ public class UsuarioJpaEntity implements UserDetails {
     private String email;
     private String senha;
     private String papel; // ex: ROLE_PORTEIRO
+    private String telefone;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
