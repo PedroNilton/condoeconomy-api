@@ -63,4 +63,19 @@ public class FinancasController {
 
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/boletos")
+    @PreAuthorize("hasRole('SINDICO')")
+    public ResponseEntity<java.util.List<DashboardFinanceiroResponse.BoletoResumo>> getBoletos() {
+        var boletos = boletoRepository.findAllByOrderByDataVencimentoDesc().stream().map(b -> 
+            DashboardFinanceiroResponse.BoletoResumo.builder()
+                .id(b.getId().toString())
+                .unidade(b.getUnidadeTexto())
+                .valor(b.getValor())
+                .status(b.getStatus())
+                .data(b.getDataVencimento().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                .build()
+        ).collect(Collectors.toList());
+        return ResponseEntity.ok(boletos);
+    }
 }
