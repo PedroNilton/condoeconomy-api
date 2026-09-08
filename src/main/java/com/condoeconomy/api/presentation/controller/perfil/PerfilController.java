@@ -45,6 +45,8 @@ public class PerfilController {
                 .map(usuario -> {
                     usuario.setNome(dados.getNome());
                     usuario.setTelefone(dados.getTelefone());
+                    usuario.setApartamento(dados.getApartamento());
+                    usuario.setBloco(dados.getBloco());
                     return ResponseEntity.ok(usuarioRepository.save(usuario));
                 })
                 .orElse(ResponseEntity.notFound().build());

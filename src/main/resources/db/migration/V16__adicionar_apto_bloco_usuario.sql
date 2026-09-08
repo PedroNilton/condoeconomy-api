@@ -1,0 +1,2 @@
+ALTER TABLE usuario ADD COLUMN apartamento VARCHAR(20);
+ALTER TABLE usuario ADD COLUMN bloco VARCHAR(20);
