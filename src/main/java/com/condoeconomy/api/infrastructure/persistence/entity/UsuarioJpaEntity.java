@@ -33,6 +33,7 @@ public class UsuarioJpaEntity implements UserDetails {
     private String telefone;
     private String apartamento;
     private String bloco;
+    private String foto;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

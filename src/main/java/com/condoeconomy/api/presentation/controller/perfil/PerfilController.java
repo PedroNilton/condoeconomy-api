@@ -47,6 +47,7 @@ public class PerfilController {
                     usuario.setTelefone(dados.getTelefone());
                     usuario.setApartamento(dados.getApartamento());
                     usuario.setBloco(dados.getBloco());
+                    usuario.setFoto(dados.getFoto());
                     return ResponseEntity.ok(usuarioRepository.save(usuario));
                 })
                 .orElse(ResponseEntity.notFound().build());
