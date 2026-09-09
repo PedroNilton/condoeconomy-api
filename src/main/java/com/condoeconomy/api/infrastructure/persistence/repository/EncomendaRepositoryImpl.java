@@ -49,6 +49,14 @@ public class EncomendaRepositoryImpl implements EncomendaRepository {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<Encomenda> buscarPorMorador(String nome) {
+        return springDataRepository.findByDestinatarioContainingIgnoreCaseOrderByDataRecebimentoDesc(nome)
+                .stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
     private Encomenda toDomain(EncomendaJpaEntity entity) {
         Encomenda encomenda = new Encomenda(
                 entity.getId(), 

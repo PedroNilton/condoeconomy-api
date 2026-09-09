@@ -9,4 +9,5 @@ public interface EncomendaRepository {
     Encomenda salvar(Encomenda encomenda);
     Optional<Encomenda> buscarPorId(UUID id);
     List<Encomenda> buscarTodas();
+    List<Encomenda> buscarPorMorador(String nome);
 }

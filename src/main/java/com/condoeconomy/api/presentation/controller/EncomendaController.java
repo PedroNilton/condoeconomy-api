@@ -35,6 +35,16 @@ public class EncomendaController {
         return ResponseEntity.ok(dtos);
     }
 
+    @GetMapping("/minhas")
+    public ResponseEntity<List<EncomendaResponseDTO>> listarMinhasEncomendas(org.springframework.security.core.Authentication auth) {
+        com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity user = 
+            (com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity) auth.getPrincipal();
+        
+        var encomendas = encomendaRepository.buscarPorMorador(user.getNome());
+        var dtos = encomendas.stream().map(EncomendaResponseDTO::fromEntity).toList();
+        return ResponseEntity.ok(dtos);
+    }
+
     @PostMapping
     public ResponseEntity<EncomendaResponseDTO> registrarChegada(
             @Valid @RequestBody ReceberEncomendaRequestDTO request) {
