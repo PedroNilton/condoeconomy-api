@@ -22,7 +22,17 @@ public class CriarVisitanteUseCase {
     @Transactional
     public Visitante executar(String nome, String sobrenome, String blocoDestino, String unidadeDestino, String placaVeiculo) {
         // Auto-Checkin flow fields
-        Visitante visitante = new Visitante(nome, sobrenome, null, LocalDate.now(), blocoDestino, unidadeDestino, null, placaVeiculo, "VISITANTE");
+        Visitante visitante = new Visitante(
+                nome, 
+                sobrenome, 
+                "NÃO INFORMADO", // documento
+                LocalDate.now(), 
+                blocoDestino, 
+                unidadeDestino, 
+                "A CONFIRMAR", // morador_responsavel
+                placaVeiculo, 
+                "VISITANTE"
+        );
         Visitante salvo = repository.save(visitante);
         notificationService.notifyVisitantesUpdate();
         return salvo;
