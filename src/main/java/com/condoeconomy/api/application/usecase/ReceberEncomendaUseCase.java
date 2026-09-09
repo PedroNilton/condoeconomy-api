@@ -24,21 +24,14 @@ public class ReceberEncomendaUseCase {
     }
 
     public Encomenda executar(String codigoRastreio, String transportadora, String destinatario, String unidade) {
-        
-        // 1. Cria a encomenda de acordo com as regras de dominio (ja nasce AGUARDANDO_RETIRADA)
         Encomenda novaEncomenda = new Encomenda(UUID.randomUUID(), codigoRastreio, transportadora, destinatario, unidade);
-
-        // 2. Persiste no banco de dados
         Encomenda encomendaSalva = encomendaRepository.salvar(novaEncomenda);
 
-        // 3. Notificacao
         String titulo = "Nova encomenda chegou!";
-        String mensagem = String.format("Um pacote da %s para %s esta aguardando retirada na portaria.", transportadora, destinatario);
-        notificationGateway.notificarMoradoresDaUnidade(null, titulo, mensagem);
+        String mensagem = String.format("Um pacote da %s para %s está aguardando retirada na portaria.", transportadora, destinatario);
+        notificationGateway.notificarMorador(destinatario, unidade, titulo, mensagem);
 
-        // 4. Websocket
         notificationService.notifyEncomendasUpdate();
-
         return encomendaSalva;
     }
 }
