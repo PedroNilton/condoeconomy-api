@@ -11,7 +11,7 @@ public record EncomendaResponseDTO(
         String destinatario,
         String unidade,
         String status, 
-        LocalDateTime dataChegada,
+        LocalDateTime dataRecebimento,
         LocalDateTime dataRetirada
 ) {
     public static EncomendaResponseDTO fromEntity(Encomenda e) {

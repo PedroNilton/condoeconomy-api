@@ -31,7 +31,6 @@ public class EncomendaRepositoryImpl implements EncomendaRepository {
         entity.setDataRetirada(encomenda.getDataRetirada());
         entity.setDestinatario(encomenda.getDestinatario());
         entity.setUnidadeTexto(encomenda.getUnidade());
-        // unidadeId is null since we use string fields for MVP
         
         springDataRepository.save(entity);
         return encomenda;
@@ -51,12 +50,10 @@ public class EncomendaRepositoryImpl implements EncomendaRepository {
 
     @Override
     public List<Encomenda> buscarPorMorador(String nome, String bloco, String apartamento) {
-        // Remove suffixos comuns como "(Morador)" para melhorar as chances de match
         String nomeBusca = nome.replaceAll("(?i)\\s*\\(Morador\\)", "").trim();
         
         String unidadeBusca = null;
         if (bloco != null && apartamento != null && !bloco.isBlank() && !apartamento.isBlank()) {
-            // Constrói uma string que provavelmente existe em unidadeTexto (ex: "Amorgos - 01" ou "Apto 01")
             unidadeBusca = bloco.trim() + " - " + apartamento.trim();
         }
         
@@ -72,17 +69,15 @@ public class EncomendaRepositoryImpl implements EncomendaRepository {
     }
 
     private Encomenda toDomain(EncomendaJpaEntity entity) {
-        Encomenda encomenda = new Encomenda(
+        return Encomenda.reconstituir(
                 entity.getId(), 
                 entity.getCodigoRastreio(), 
                 entity.getTransportadora(), 
                 entity.getDestinatario(),
-                entity.getUnidadeTexto()
+                entity.getUnidadeTexto(),
+                StatusEncomenda.valueOf(entity.getStatus()),
+                entity.getDataRecebimento(),
+                entity.getDataRetirada()
         );
-        
-        if (StatusEncomenda.RETIRADA.name().equals(entity.getStatus())) {
-            encomenda.registrarRetirada();
-        }
-        return encomenda;
     }
 }

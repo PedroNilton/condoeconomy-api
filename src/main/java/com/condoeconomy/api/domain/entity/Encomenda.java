@@ -9,14 +9,14 @@ public class Encomenda {
     private final String codigoRastreio;
     private final String transportadora;
     private final String destinatario;
-    private final String unidade; // Texto livre, ex: "Apto 204"
+    private final String unidade;
     private StatusEncomenda status;
     private final LocalDateTime dataRecebimento;
     private LocalDateTime dataRetirada;
 
     public Encomenda(UUID id, String codigoRastreio, String transportadora, String destinatario, String unidade) {
         if (destinatario == null || destinatario.trim().isEmpty()) {
-            throw new IllegalArgumentException("O destinatário é obrigatório");
+            throw new IllegalArgumentException("O destinatario é obrigatório");
         }
         if (unidade == null || unidade.trim().isEmpty()) {
             throw new IllegalArgumentException("A unidade é obrigatória");
@@ -30,6 +30,21 @@ public class Encomenda {
         this.dataRecebimento = LocalDateTime.now();
     }
 
+    private Encomenda(UUID id, String codigoRastreio, String transportadora, String destinatario, String unidade, StatusEncomenda status, LocalDateTime dataRecebimento, LocalDateTime dataRetirada) {
+        this.id = id;
+        this.codigoRastreio = codigoRastreio;
+        this.transportadora = transportadora;
+        this.destinatario = destinatario;
+        this.unidade = unidade;
+        this.status = status;
+        this.dataRecebimento = dataRecebimento;
+        this.dataRetirada = dataRetirada;
+    }
+
+    public static Encomenda reconstituir(UUID id, String codigoRastreio, String transportadora, String destinatario, String unidade, StatusEncomenda status, LocalDateTime dataRecebimento, LocalDateTime dataRetirada) {
+        return new Encomenda(id, codigoRastreio, transportadora, destinatario, unidade, status, dataRecebimento, dataRetirada);
+    }
+
     public void registrarRetirada() {
         if (this.status != StatusEncomenda.AGUARDANDO_RETIRADA) {
             throw new IllegalStateException("Só é possível retirar encomendas que estão aguardando");
@@ -38,7 +53,6 @@ public class Encomenda {
         this.dataRetirada = LocalDateTime.now();
     }
 
-    // Getters
     public UUID getId() { return id; }
     public String getCodigoRastreio() { return codigoRastreio; }
     public String getTransportadora() { return transportadora; }
