@@ -51,7 +51,10 @@ public class EncomendaRepositoryImpl implements EncomendaRepository {
 
     @Override
     public List<Encomenda> buscarPorMorador(String nome) {
-        return springDataRepository.findByDestinatarioContainingIgnoreCaseOrderByDataRecebimentoDesc(nome)
+        // Remove suffixos comuns como "(Morador)" para melhorar as chances de match
+        String nomeBusca = nome.replaceAll("(?i)\\s*\\(Morador\\)", "").trim();
+        
+        return springDataRepository.findFlexibleByDestinatario(nomeBusca)
                 .stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());

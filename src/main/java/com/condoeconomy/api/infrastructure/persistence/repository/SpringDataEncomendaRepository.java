@@ -8,7 +8,12 @@ import java.util.UUID;
 
 import java.util.List;
 
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 @Repository
 public interface SpringDataEncomendaRepository extends JpaRepository<EncomendaJpaEntity, UUID> {
-    List<EncomendaJpaEntity> findByDestinatarioContainingIgnoreCaseOrderByDataRecebimentoDesc(String nome);
+    
+    @Query("SELECT e FROM EncomendaJpaEntity e WHERE LOWER(:nome) LIKE LOWER(CONCAT('%', e.destinatario, '%')) OR LOWER(e.destinatario) LIKE LOWER(CONCAT('%', :nome, '%')) ORDER BY e.dataRecebimento DESC")
+    List<EncomendaJpaEntity> findFlexibleByDestinatario(@Param("nome") String nome);
 }
