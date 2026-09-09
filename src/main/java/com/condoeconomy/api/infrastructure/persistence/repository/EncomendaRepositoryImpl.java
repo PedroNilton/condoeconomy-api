@@ -50,14 +50,25 @@ public class EncomendaRepositoryImpl implements EncomendaRepository {
     }
 
     @Override
-    public List<Encomenda> buscarPorMorador(String nome) {
+    public List<Encomenda> buscarPorMorador(String nome, String bloco, String apartamento) {
         // Remove suffixos comuns como "(Morador)" para melhorar as chances de match
         String nomeBusca = nome.replaceAll("(?i)\\s*\\(Morador\\)", "").trim();
         
-        return springDataRepository.findFlexibleByDestinatario(nomeBusca)
+        String unidadeBusca = null;
+        if (bloco != null && apartamento != null && !bloco.isBlank() && !apartamento.isBlank()) {
+            // Constrói uma string que provavelmente existe em unidadeTexto (ex: "Amorgos - 01" ou "Apto 01")
+            unidadeBusca = bloco.trim() + " - " + apartamento.trim();
+        }
+        
+        return springDataRepository.findFlexibleByDestinatarioOrUnidade(nomeBusca, unidadeBusca)
                 .stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public boolean existePorCodigoRastreio(String codigoRastreio) {
+        return springDataRepository.existsByCodigoRastreio(codigoRastreio);
     }
 
     private Encomenda toDomain(EncomendaJpaEntity entity) {

@@ -9,5 +9,6 @@ public interface EncomendaRepository {
     Encomenda salvar(Encomenda encomenda);
     Optional<Encomenda> buscarPorId(UUID id);
     List<Encomenda> buscarTodas();
-    List<Encomenda> buscarPorMorador(String nome);
+    List<Encomenda> buscarPorMorador(String nome, String bloco, String apartamento);
+    boolean existePorCodigoRastreio(String codigoRastreio);
 }

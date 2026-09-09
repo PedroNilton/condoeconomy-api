@@ -40,7 +40,7 @@ public class EncomendaController {
         com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity user = 
             (com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity) auth.getPrincipal();
         
-        var encomendas = encomendaRepository.buscarPorMorador(user.getNome());
+        var encomendas = encomendaRepository.buscarPorMorador(user.getNome(), user.getBloco(), user.getApartamento());
         var dtos = encomendas.stream().map(EncomendaResponseDTO::fromEntity).toList();
         return ResponseEntity.ok(dtos);
     }
@@ -64,5 +64,10 @@ public class EncomendaController {
     public ResponseEntity<EncomendaResponseDTO> registrarRetirada(@PathVariable UUID id) {
         var encomenda = registrarRetiradaUseCase.executar(id);
         return ResponseEntity.ok(EncomendaResponseDTO.fromEntity(encomenda));
+    }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<java.util.Map<String, String>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(java.util.Map.of("message", ex.getMessage()));
     }
 }

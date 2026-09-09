@@ -24,6 +24,10 @@ public class ReceberEncomendaUseCase {
     }
 
     public Encomenda executar(String codigoRastreio, String transportadora, String destinatario, String unidade) {
+        if (encomendaRepository.existePorCodigoRastreio(codigoRastreio)) {
+            throw new IllegalArgumentException("Já existe uma encomenda registrada com este código de rastreio.");
+        }
+
         Encomenda novaEncomenda = new Encomenda(UUID.randomUUID(), codigoRastreio, transportadora, destinatario, unidade);
         Encomenda encomendaSalva = encomendaRepository.salvar(novaEncomenda);
 

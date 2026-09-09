@@ -14,6 +14,12 @@ import org.springframework.data.repository.query.Param;
 @Repository
 public interface SpringDataEncomendaRepository extends JpaRepository<EncomendaJpaEntity, UUID> {
     
-    @Query("SELECT e FROM EncomendaJpaEntity e WHERE LOWER(:nome) LIKE LOWER(CONCAT('%', e.destinatario, '%')) OR LOWER(e.destinatario) LIKE LOWER(CONCAT('%', :nome, '%')) ORDER BY e.dataRecebimento DESC")
-    List<EncomendaJpaEntity> findFlexibleByDestinatario(@Param("nome") String nome);
+    @Query("SELECT e FROM EncomendaJpaEntity e WHERE " +
+           "LOWER(:nome) LIKE LOWER(CONCAT('%', e.destinatario, '%')) OR " +
+           "LOWER(e.destinatario) LIKE LOWER(CONCAT('%', :nome, '%')) OR " +
+           "(:unidade IS NOT NULL AND LOWER(e.unidadeTexto) LIKE LOWER(CONCAT('%', :unidade, '%'))) " +
+           "ORDER BY e.dataRecebimento DESC")
+    List<EncomendaJpaEntity> findFlexibleByDestinatarioOrUnidade(@Param("nome") String nome, @Param("unidade") String unidade);
+
+    boolean existsByCodigoRastreio(String codigoRastreio);
 }
