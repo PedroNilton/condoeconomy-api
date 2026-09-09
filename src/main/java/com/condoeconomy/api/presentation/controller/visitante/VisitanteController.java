@@ -45,11 +45,10 @@ public class VisitanteController {
     public ResponseEntity<VisitanteResponseDTO> criar(@RequestBody CriarVisitanteRequestDTO request) {
         var visitante = criarVisitanteUseCase.executar(
                 request.nome(),
-                request.documento(),
-                request.dataVisita(),
+                request.sobrenome(),
+                request.blocoDestino(),
                 request.unidadeDestino(),
-                request.moradorResponsavel(),
-                request.tipo()
+                request.placaVeiculo()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(VisitanteResponseDTO.fromEntity(visitante));
     }

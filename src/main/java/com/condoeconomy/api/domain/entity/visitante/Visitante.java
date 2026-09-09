@@ -15,27 +15,33 @@ public class Visitante {
     @Id
     private UUID id;
     private String nome;
+    private String sobrenome;
     private String documento;
     private LocalDate dataVisita;
+    private String blocoDestino;
     private String unidadeDestino;
     private String moradorResponsavel;
+    private String placaVeiculo;
     private String tipo; // VISITANTE, PRESTADOR_SERVICO
-    private String status; // AGUARDANDO, NO_CONDOMINIO, FINALIZADO
+    private String status; // AGUARDANDO_LIBERACAO, NO_CONDOMINIO, FINALIZADO
     private LocalDateTime horaEntrada;
     private LocalDateTime horaSaida;
 
     public Visitante() {
     }
 
-    public Visitante(String nome, String documento, LocalDate dataVisita, String unidadeDestino, String moradorResponsavel, String tipo) {
+    public Visitante(String nome, String sobrenome, String documento, LocalDate dataVisita, String blocoDestino, String unidadeDestino, String moradorResponsavel, String placaVeiculo, String tipo) {
         this.id = UUID.randomUUID();
         this.nome = nome;
+        this.sobrenome = sobrenome;
         this.documento = documento;
         this.dataVisita = dataVisita;
+        this.blocoDestino = blocoDestino;
         this.unidadeDestino = unidadeDestino;
         this.moradorResponsavel = moradorResponsavel;
+        this.placaVeiculo = placaVeiculo;
         this.tipo = tipo;
-        this.status = "AGUARDANDO";
+        this.status = "AGUARDANDO_LIBERACAO";
     }
 
     public void registrarEntrada() {
@@ -56,10 +62,13 @@ public class Visitante {
 
     public UUID getId() { return id; }
     public String getNome() { return nome; }
+    public String getSobrenome() { return sobrenome; }
     public String getDocumento() { return documento; }
     public LocalDate getDataVisita() { return dataVisita; }
+    public String getBlocoDestino() { return blocoDestino; }
     public String getUnidadeDestino() { return unidadeDestino; }
     public String getMoradorResponsavel() { return moradorResponsavel; }
+    public String getPlacaVeiculo() { return placaVeiculo; }
     public String getTipo() { return tipo; }
     public String getStatus() { return status; }
     public LocalDateTime getHoraEntrada() { return horaEntrada; }

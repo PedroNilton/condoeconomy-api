@@ -38,6 +38,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/testes/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/visitantes").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/condominios").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/encomendas").hasRole("PORTEIRO")

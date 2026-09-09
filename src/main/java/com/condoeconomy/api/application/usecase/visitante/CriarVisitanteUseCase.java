@@ -20,8 +20,9 @@ public class CriarVisitanteUseCase {
     }
 
     @Transactional
-    public Visitante executar(String nome, String documento, LocalDate dataVisita, String unidadeDestino, String moradorResponsavel, String tipo) {
-        Visitante visitante = new Visitante(nome, documento, dataVisita, unidadeDestino, moradorResponsavel, tipo);
+    public Visitante executar(String nome, String sobrenome, String blocoDestino, String unidadeDestino, String placaVeiculo) {
+        // Auto-Checkin flow fields
+        Visitante visitante = new Visitante(nome, sobrenome, null, LocalDate.now(), blocoDestino, unidadeDestino, null, placaVeiculo, "VISITANTE");
         Visitante salvo = repository.save(visitante);
         notificationService.notifyVisitantesUpdate();
         return salvo;
