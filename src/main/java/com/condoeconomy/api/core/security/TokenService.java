@@ -15,7 +15,7 @@ import java.time.ZoneOffset;
 @Service
 public class TokenService {
 
-    @Value("${api.security.token.secret:condoeconomy-secret-key-123}")
+    @Value("${api.security.token.secret}")
     private String secret;
 
     public String generateToken(UsuarioJpaEntity usuario) {
@@ -41,7 +41,7 @@ public class TokenService {
                     .verify(token)
                     .getSubject();
         } catch (JWTVerificationException exception) {
-            return "";
+            return null;
         }
     }
 

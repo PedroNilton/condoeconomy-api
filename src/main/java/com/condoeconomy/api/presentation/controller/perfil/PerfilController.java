@@ -67,8 +67,12 @@ public class PerfilController {
 
     @DeleteMapping("/veiculos/{id}")
     public ResponseEntity<Void> deleteVeiculo(Authentication auth, @PathVariable UUID id) {
-        veiculoRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return veiculoRepository.findByIdAndUsuarioId(id, getLoggedUserId(auth))
+                .map(veiculo -> {
+                    veiculoRepository.delete(veiculo);
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     // --- PETS ---
@@ -85,8 +89,12 @@ public class PerfilController {
 
     @DeleteMapping("/pets/{id}")
     public ResponseEntity<Void> deletePet(Authentication auth, @PathVariable UUID id) {
-        petRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return petRepository.findByIdAndUsuarioId(id, getLoggedUserId(auth))
+                .map(pet -> {
+                    petRepository.delete(pet);
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     // --- MORADORES ADICIONAIS ---
@@ -103,7 +111,11 @@ public class PerfilController {
 
     @DeleteMapping("/moradores/{id}")
     public ResponseEntity<Void> deleteMorador(Authentication auth, @PathVariable UUID id) {
-        moradorAdicionalRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return moradorAdicionalRepository.findByIdAndUsuarioId(id, getLoggedUserId(auth))
+                .map(morador -> {
+                    moradorAdicionalRepository.delete(morador);
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 }
