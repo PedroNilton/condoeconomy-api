@@ -11,6 +11,9 @@ import java.util.UUID;
 public interface ReservaRepository {
     Reserva salvar(Reserva reserva);
     List<Reserva> buscarPorData(LocalDate data);
+    List<Reserva> buscarPorStatus(String status);
+    List<Reserva> buscarPorDataEStatus(LocalDate data, String status);
+    List<Reserva> buscarPorUnidade(String unidade);
     Optional<Reserva> buscarPorId(UUID id);
     List<AreaComum> buscarAreasComuns();
     Optional<AreaComum> buscarAreaComumPorId(UUID id);

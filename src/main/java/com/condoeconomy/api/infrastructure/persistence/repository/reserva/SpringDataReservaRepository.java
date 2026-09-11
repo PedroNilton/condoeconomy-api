@@ -8,5 +8,8 @@ import java.util.UUID;
 
 public interface SpringDataReservaRepository extends JpaRepository<ReservaJpaEntity, UUID> {
     List<ReservaJpaEntity> findByDataReservaOrderByHoraInicioAsc(LocalDate data);
+    List<ReservaJpaEntity> findByStatusOrderByDataReservaAscHoraInicioAsc(String status);
+    List<ReservaJpaEntity> findByDataReservaAndStatusOrderByHoraInicioAsc(LocalDate data, String status);
+    List<ReservaJpaEntity> findByUnidadeTextoOrderByDataReservaDesc(String unidadeTexto);
     boolean existsByAreaComumIdAndDataReservaAndStatusNot(UUID areaComumId, LocalDate data, String status);
 }

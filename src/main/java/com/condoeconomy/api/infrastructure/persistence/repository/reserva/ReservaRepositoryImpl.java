@@ -39,6 +39,24 @@ public class ReservaRepositoryImpl implements ReservaRepository {
     }
 
     @Override
+    public List<Reserva> buscarPorStatus(String status) {
+        return reservaDb.findByStatusOrderByDataReservaAscHoraInicioAsc(status)
+                .stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Reserva> buscarPorDataEStatus(LocalDate data, String status) {
+        return reservaDb.findByDataReservaAndStatusOrderByHoraInicioAsc(data, status)
+                .stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Reserva> buscarPorUnidade(String unidade) {
+        return reservaDb.findByUnidadeTextoOrderByDataReservaDesc(unidade)
+                .stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public Optional<Reserva> buscarPorId(UUID id) {
         return reservaDb.findById(id).map(this::toDomain);
     }

@@ -15,7 +15,14 @@ public class ListarReservasUseCase {
         this.reservaRepository = reservaRepository;
     }
 
-    public List<Reserva> executar(LocalDate data) {
-        return reservaRepository.buscarPorData(data);
+    public List<Reserva> executar(LocalDate data, String status) {
+        if (data != null && status != null) {
+            return reservaRepository.buscarPorDataEStatus(data, status);
+        } else if (data != null) {
+            return reservaRepository.buscarPorData(data);
+        } else if (status != null) {
+            return reservaRepository.buscarPorStatus(status);
+        }
+        throw new IllegalArgumentException("Forneça data ou status para buscar reservas");
     }
 }

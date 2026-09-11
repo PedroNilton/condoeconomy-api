@@ -5,6 +5,7 @@ import com.condoeconomy.api.application.usecase.reserva.CheckInConvidadoUseCase;
 import com.condoeconomy.api.application.usecase.reserva.CriarReservaUseCase;
 import com.condoeconomy.api.application.usecase.reserva.ListarAreasComunsUseCase;
 import com.condoeconomy.api.application.usecase.reserva.ListarReservasUseCase;
+import com.condoeconomy.api.application.usecase.reserva.ListarMinhasReservasUseCase;
 import com.condoeconomy.api.presentation.dto.reserva.AreaComumResponseDTO;
 import com.condoeconomy.api.presentation.dto.reserva.CriarReservaRequestDTO;
 import com.condoeconomy.api.presentation.dto.reserva.ReservaResponseDTO;
@@ -28,17 +29,36 @@ public class ReservaController {
     private final ListarAreasComunsUseCase listarAreasComunsUseCase;
     private final CheckInConvidadoUseCase checkInConvidadoUseCase;
     private final AprovarRejeitarReservaUseCase aprovarRejeitarReservaUseCase;
+    private final ListarMinhasReservasUseCase listarMinhasReservasUseCase;
 
     public ReservaController(CriarReservaUseCase criarReservaUseCase, 
                              ListarReservasUseCase listarReservasUseCase, 
                              ListarAreasComunsUseCase listarAreasComunsUseCase,
                              CheckInConvidadoUseCase checkInConvidadoUseCase,
-                             AprovarRejeitarReservaUseCase aprovarRejeitarReservaUseCase) {
+                             AprovarRejeitarReservaUseCase aprovarRejeitarReservaUseCase,
+                             ListarMinhasReservasUseCase listarMinhasReservasUseCase) {
         this.criarReservaUseCase = criarReservaUseCase;
         this.listarReservasUseCase = listarReservasUseCase;
         this.listarAreasComunsUseCase = listarAreasComunsUseCase;
         this.checkInConvidadoUseCase = checkInConvidadoUseCase;
         this.aprovarRejeitarReservaUseCase = aprovarRejeitarReservaUseCase;
+        this.listarMinhasReservasUseCase = listarMinhasReservasUseCase;
+    }
+
+    @GetMapping("/minhas")
+    public ResponseEntity<List<ReservaResponseDTO>> listarMinhasReservas(org.springframework.security.core.Authentication auth) {
+        try {
+            com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity user = 
+                (com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity) auth.getPrincipal();
+            String unidadeConsulta = "Apto " + user.getApartamento() + " - Bloco " + user.getBloco();
+            
+            var reservas = listarMinhasReservasUseCase.executar(unidadeConsulta);
+            var dtos = reservas.stream().map(ReservaResponseDTO::fromEntity).collect(Collectors.toList());
+            return ResponseEntity.ok(dtos);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @GetMapping("/areas-comuns")
@@ -50,16 +70,31 @@ public class ReservaController {
 
     @GetMapping
     public ResponseEntity<List<ReservaResponseDTO>> listarReservas(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data,
+            @RequestParam(required = false) String status) {
         
-        LocalDate dataBusca = data != null ? data : LocalDate.now();
-        var reservas = listarReservasUseCase.executar(dataBusca);
+        List<com.condoeconomy.api.domain.entity.reserva.Reserva> reservas;
+        if (data == null && status == null) {
+            reservas = listarReservasUseCase.executar(LocalDate.now(), null);
+        } else {
+            reservas = listarReservasUseCase.executar(data, status);
+        }
+
         var dtos = reservas.stream().map(ReservaResponseDTO::fromEntity).collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }
 
     @PostMapping
-    public ResponseEntity<ReservaResponseDTO> criarReserva(@Valid @RequestBody CriarReservaRequestDTO request) {
+    public ResponseEntity<ReservaResponseDTO> criarReserva(
+            @Valid @RequestBody CriarReservaRequestDTO request, 
+            org.springframework.security.core.Authentication auth) {
+        
+        com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity user = 
+            (com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity) auth.getPrincipal();
+        
+        String unidade = "Apto " + user.getApartamento() + " - Bloco " + user.getBloco();
+        String morador = user.getNome();
+
         List<CriarReservaUseCase.ConvidadoDtoInput> convidadosInput = request.convidados() != null 
                 ? request.convidados().stream()
                     .map(c -> new CriarReservaUseCase.ConvidadoDtoInput(c.nome(), c.documento()))
@@ -67,7 +102,7 @@ public class ReservaController {
                 : List.of();
 
         var reserva = criarReservaUseCase.executar(
-                request.areaComumId(), request.unidade(), request.morador(), request.titulo(),
+                request.areaComumId(), unidade, morador, request.titulo(),
                 request.data(), request.inicio(), request.fim(), convidadosInput
         );
 
