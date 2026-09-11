@@ -93,7 +93,7 @@ public class ReservaRepositoryImpl implements ReservaRepository {
 
         return new Reserva(e.getId(), toDomainArea(e.getAreaComum()), e.getUnidadeTexto(), e.getMoradorSolicitante(),
                 e.getTitulo(), e.getDataReserva(), e.getHoraInicio(), e.getHoraFim(), 
-                Reserva.StatusReserva.valueOf(e.getStatus()), e.getDataSolicitacao(), convidados);
+                Reserva.StatusReserva.valueOf(e.getStatus()), e.getDataSolicitacao(), convidados, e.getMotivoRejeicao());
     }
 
     private ReservaJpaEntity toJpa(Reserva d) {
@@ -108,6 +108,7 @@ public class ReservaRepositoryImpl implements ReservaRepository {
         e.setHoraFim(d.getHoraFim());
         e.setStatus(d.getStatus().name());
         e.setDataSolicitacao(d.getDataSolicitacao());
+        e.setMotivoRejeicao(d.getMotivoRejeicao());
 
         List<ConvidadoJpaEntity> convidados = d.getConvidados().stream().map(c -> new ConvidadoJpaEntity(
                 c.getId(), e, c.getNome(), c.getDocumento(), c.getStatusEntrada().name(), c.getHoraEntrada()

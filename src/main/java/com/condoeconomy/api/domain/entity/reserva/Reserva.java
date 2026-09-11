@@ -19,6 +19,7 @@ public class Reserva {
     private StatusReserva status;
     private LocalDateTime dataSolicitacao;
     private List<Convidado> convidados;
+    private String motivoRejeicao;
 
     public enum StatusReserva {
         PENDENTE_APROVACAO, APROVADA, REJEITADA, CANCELADA, REALIZADA
@@ -26,7 +27,8 @@ public class Reserva {
 
     public Reserva(UUID id, AreaComum areaComum, String unidadeTexto, String moradorSolicitante, 
                    String titulo, LocalDate dataReserva, LocalTime horaInicio, LocalTime horaFim, 
-                   StatusReserva status, LocalDateTime dataSolicitacao, List<Convidado> convidados) {
+                   StatusReserva status, LocalDateTime dataSolicitacao, List<Convidado> convidados,
+                   String motivoRejeicao) {
         this.id = id;
         this.areaComum = areaComum;
         this.unidadeTexto = unidadeTexto;
@@ -38,12 +40,13 @@ public class Reserva {
         this.status = status;
         this.dataSolicitacao = dataSolicitacao;
         this.convidados = convidados != null ? convidados : new ArrayList<>();
+        this.motivoRejeicao = motivoRejeicao;
     }
 
     public static Reserva criar(AreaComum area, String unidade, String morador, String titulo, 
                                 LocalDate data, LocalTime inicio, LocalTime fim, List<Convidado> convidados) {
         return new Reserva(UUID.randomUUID(), area, unidade, morador, titulo, data, inicio, fim, 
-                           StatusReserva.PENDENTE_APROVACAO, LocalDateTime.now(), convidados);
+                           StatusReserva.PENDENTE_APROVACAO, LocalDateTime.now(), convidados, null);
     }
 
     public void cancelar() {
@@ -54,8 +57,9 @@ public class Reserva {
         this.status = StatusReserva.APROVADA;
     }
 
-    public void rejeitar() {
+    public void rejeitar(String motivo) {
         this.status = StatusReserva.REJEITADA;
+        this.motivoRejeicao = motivo;
     }
 
     // Getters
@@ -70,4 +74,5 @@ public class Reserva {
     public StatusReserva getStatus() { return status; }
     public LocalDateTime getDataSolicitacao() { return dataSolicitacao; }
     public List<Convidado> getConvidados() { return convidados; }
+    public String getMotivoRejeicao() { return motivoRejeicao; }
 }

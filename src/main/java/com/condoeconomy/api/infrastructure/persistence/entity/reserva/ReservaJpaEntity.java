@@ -10,6 +10,8 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import com.condoeconomy.api.domain.entity.reserva.Reserva;
 
 @Entity
 @Table(name = "reserva")
@@ -31,8 +33,14 @@ public class ReservaJpaEntity {
     private LocalTime horaInicio;
     private LocalTime horaFim;
     private String status;
+
+    @Column(nullable = false, updatable = false)
     private LocalDateTime dataSolicitacao;
 
+    @Column(name = "motivo_rejeicao")
+    private String motivoRejeicao;
+
     @OneToMany(mappedBy = "reserva", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ConvidadoJpaEntity> convidados = new ArrayList<>();
+    private List<ConvidadoJpaEntity> convidados;
+
 }

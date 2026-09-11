@@ -24,10 +24,10 @@ public class AprovarRejeitarReservaUseCase {
         notificationService.notifyReservasUpdate();
     }
 
-    public void rejeitar(UUID reservaId) {
+    public void rejeitar(UUID reservaId, String motivo) {
         Reserva reserva = repository.buscarPorId(reservaId)
             .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
-        reserva.rejeitar();
+        reserva.rejeitar(motivo);
         repository.salvar(reserva);
         notificationService.notifyReservasUpdate();
     }

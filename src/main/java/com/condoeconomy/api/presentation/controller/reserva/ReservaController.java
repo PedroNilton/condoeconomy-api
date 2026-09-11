@@ -9,6 +9,7 @@ import com.condoeconomy.api.application.usecase.reserva.ListarMinhasReservasUseC
 import com.condoeconomy.api.presentation.dto.reserva.AreaComumResponseDTO;
 import com.condoeconomy.api.presentation.dto.reserva.CriarReservaRequestDTO;
 import com.condoeconomy.api.presentation.dto.reserva.ReservaResponseDTO;
+import com.condoeconomy.api.presentation.dto.reserva.RejeitarReservaRequestDTO;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -123,8 +124,9 @@ public class ReservaController {
     }
 
     @PutMapping("/{id}/rejeitar")
-    public ResponseEntity<Void> rejeitar(@PathVariable UUID id) {
-        aprovarRejeitarReservaUseCase.rejeitar(id);
+    public ResponseEntity<Void> rejeitar(@PathVariable UUID id, @RequestBody(required = false) RejeitarReservaRequestDTO dto) {
+        String motivo = dto != null ? dto.motivo() : null;
+        aprovarRejeitarReservaUseCase.rejeitar(id, motivo);
         return ResponseEntity.noContent().build();
     }
 }
