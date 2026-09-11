@@ -1,6 +1,7 @@
 package com.condoeconomy.api.infrastructure.notification;
 
 import com.condoeconomy.api.application.gateway.NotificationGateway;
+import com.condoeconomy.api.application.service.notification.PushNotificationService;
 import com.condoeconomy.api.domain.entity.notificacao.Notificacao;
 import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataUsuarioRepository;
@@ -21,13 +22,16 @@ public class NotificationGatewayImpl implements NotificationGateway {
     private final SpringDataUsuarioRepository usuarioRepository;
     private final NotificacaoRepository notificacaoRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final PushNotificationService pushNotificationService;
 
     public NotificationGatewayImpl(SpringDataUsuarioRepository usuarioRepository, 
                                    NotificacaoRepository notificacaoRepository, 
-                                   SimpMessagingTemplate messagingTemplate) {
+                                   SimpMessagingTemplate messagingTemplate,
+                                   PushNotificationService pushNotificationService) {
         this.usuarioRepository = usuarioRepository;
         this.notificacaoRepository = notificacaoRepository;
         this.messagingTemplate = messagingTemplate;
+        this.pushNotificationService = pushNotificationService;
     }
 
     @Override
@@ -42,7 +46,7 @@ public class NotificationGatewayImpl implements NotificationGateway {
         // Find user by matching partial name. If we find them, save notification and push websocket.
         List<UsuarioJpaEntity> usuarios = usuarioRepository.findAll();
         for (UsuarioJpaEntity u : usuarios) {
-            if ("MORADOR".equals(u.getPapel()) && destinatario != null && u.getNome().toLowerCase().contains(destinatario.toLowerCase().trim())) {
+            if ("ROLE_MORADOR".equals(u.getPapel()) && destinatario != null && u.getNome().toLowerCase().contains(destinatario.toLowerCase().trim())) {
                 log.info("Morador encontrado! Salvando notificacao para {}", u.getNome());
                 
                 Notificacao notif = new Notificacao(UUID.randomUUID(), titulo, mensagem, u.getId());
@@ -50,6 +54,9 @@ public class NotificationGatewayImpl implements NotificationGateway {
                 
                 // Dispara Websocket para atualizar o ícone de sino e a lista
                 messagingTemplate.convertAndSend("/topic/notificacoes/" + u.getId(), "UPDATE");
+
+                // Send Web Push Notification
+                pushNotificationService.enviarPush(u.getId().toString(), titulo, mensagem);
             }
         }
     }

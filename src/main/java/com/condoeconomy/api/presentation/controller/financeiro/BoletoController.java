@@ -4,6 +4,7 @@ import com.condoeconomy.api.application.usecase.financeiro.DarBaixaBoletoUseCase
 import com.condoeconomy.api.application.usecase.financeiro.ListarBoletosUseCase;
 import com.condoeconomy.api.presentation.dto.financeiro.BoletoResponseDTO;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,8 +25,20 @@ public class BoletoController {
 
     @GetMapping
     public ResponseEntity<List<BoletoResponseDTO>> listarBoletos(
+            Authentication auth,
             @RequestParam(required = false) String unidade) {
-        var boletos = listarBoletosUseCase.executar(unidade);
+        
+        com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity user = 
+            (com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity) auth.getPrincipal();
+            
+        String unidadeConsulta = unidade;
+        
+        // Se for morador, obriga a buscar SOMENTE da própria unidade
+        if ("ROLE_MORADOR".equals(user.getPapel())) {
+            unidadeConsulta = "Apto " + user.getApartamento() + " - Bloco " + user.getBloco();
+        }
+
+        var boletos = listarBoletosUseCase.executar(unidadeConsulta);
         var dtos = boletos.stream().map(BoletoResponseDTO::fromEntity).collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }

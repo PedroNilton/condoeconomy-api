@@ -8,6 +8,7 @@ import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataMora
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataPetRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataUsuarioRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataVeiculoRepository;
+import com.condoeconomy.api.presentation.dto.perfil.UsuarioResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -33,14 +34,15 @@ public class PerfilController {
 
     // --- DADOS PESSOAIS ---
     @GetMapping("/dados")
-    public ResponseEntity<UsuarioJpaEntity> getDadosPessoais(Authentication auth) {
+    public ResponseEntity<UsuarioResponseDTO> getDadosPessoais(Authentication auth) {
         return usuarioRepository.findById(getLoggedUserId(auth))
+                .map(UsuarioResponseDTO::fromEntity)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/dados")
-    public ResponseEntity<UsuarioJpaEntity> updateDadosPessoais(Authentication auth, @RequestBody UsuarioJpaEntity dados) {
+    public ResponseEntity<UsuarioResponseDTO> updateDadosPessoais(Authentication auth, @RequestBody UsuarioJpaEntity dados) {
         return usuarioRepository.findById(getLoggedUserId(auth))
                 .map(usuario -> {
                     usuario.setNome(dados.getNome());
@@ -48,7 +50,8 @@ public class PerfilController {
                     usuario.setApartamento(dados.getApartamento());
                     usuario.setBloco(dados.getBloco());
                     usuario.setFoto(dados.getFoto());
-                    return ResponseEntity.ok(usuarioRepository.save(usuario));
+                    UsuarioJpaEntity saved = usuarioRepository.save(usuario);
+                    return ResponseEntity.ok(UsuarioResponseDTO.fromEntity(saved));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
