@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface SpringDataVeiculoRepository extends JpaRepository<VeiculoJpaEntity, UUID> {
     List<VeiculoJpaEntity> findByUsuarioId(UUID usuarioId);
     Optional<VeiculoJpaEntity> findByIdAndUsuarioId(UUID id, UUID usuarioId);
+    List<VeiculoJpaEntity> findByPlacaContainingIgnoreCase(String placa);
 }
