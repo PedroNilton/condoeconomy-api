@@ -44,6 +44,12 @@
             <scope>runtime</scope>
         </dependency>
         
+        <!-- Auditoria Forense -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-envers</artifactId>
+        </dependency>
+        
         <!-- JWT Authentication -->
         <dependency>
             <groupId>com.auth0</groupId>

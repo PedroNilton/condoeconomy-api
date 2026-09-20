@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.hibernate.envers.Audited;
 import com.condoeconomy.api.domain.entity.reserva.Reserva;
 
 @Entity
@@ -18,6 +19,7 @@ import com.condoeconomy.api.domain.entity.reserva.Reserva;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Audited
 public class ReservaJpaEntity {
     @Id
     private UUID id;

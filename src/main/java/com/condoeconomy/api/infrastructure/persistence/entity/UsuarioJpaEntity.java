@@ -15,12 +15,15 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.envers.Audited;
+
 @Entity
 @Table(name = "usuario")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Audited
 public class UsuarioJpaEntity implements UserDetails {
 
     @Id

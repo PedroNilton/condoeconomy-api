@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import org.hibernate.envers.Audited;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -16,6 +17,7 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Audited
 public class BoletoJpaEntity {
     @Id
     private UUID id;
