@@ -1,12 +1,12 @@
-# Arquitetura do Sistema - CondoEconomy API
+# Arquitetura do Sistema - HabitOS API
 
-Este documento detalha a arquitetura de software adotada para o Back-end da plataforma CondoEconomy. O projeto foi desenhado focando em escalabilidade, manutenibilidade e segurança, características essenciais para um produto B2B/SaaS voltado para Administradoras de Condomínios.
+Este documento detalha a arquitetura de software adotada para o Back-end da plataforma HabitOS. O projeto foi desenhado focando em escalabilidade, manutenibilidade e segurança, características essenciais para um produto B2B/SaaS voltado para Administradoras de Condomínios.
 
 ## 1. Padrão Arquitetural
 
 A aplicação adota os princípios da **Clean Architecture (Arquitetura Limpa)** e **Ports and Adapters (Arquitetura Hexagonal)**. O objetivo principal é manter as regras de negócio isoladas de frameworks, bancos de dados e detalhes de entrega web (HTTP).
 
-### Estrutura de Pacotes (`com.condoeconomy.api`)
+### Estrutura de Pacotes (`com.HabitOS.api`)
 
 - **`/domain`**: O coração do software. Contém as entidades de negócio puras (ex: `Usuario`, `Reserva`, `Boleto`) e interfaces de regras de negócio. Não possui dependências do Spring.
 - **`/application`**: Casos de uso (Use Cases) da aplicação. Orquestra o fluxo de dados entre as portas de entrada e o domínio. (Ex: `AutorizarVisitanteUseCase`).

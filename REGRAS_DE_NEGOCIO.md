@@ -1,6 +1,6 @@
-# Regras de Negócio e Domínio - CondoEconomy API
+# Regras de Negócio e Domínio - HabitOS API
 
-Este documento descreve as regras de negócio centrais, políticas de acesso e a estrutura de domínio do back-end do CondoEconomy.
+Este documento descreve as regras de negócio centrais, políticas de acesso e a estrutura de domínio do back-end do HabitOS.
 
 ## 1. Controle de Acesso (RBAC)
 O sistema utiliza um controle de acesso baseado em papéis (Role-Based Access Control) através de tokens JWT.
