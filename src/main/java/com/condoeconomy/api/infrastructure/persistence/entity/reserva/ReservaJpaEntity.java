@@ -26,6 +26,7 @@ public class ReservaJpaEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "area_comum_id")
+    @org.hibernate.envers.Audited(targetAuditMode = org.hibernate.envers.RelationTargetAuditMode.NOT_AUDITED)
     private AreaComumJpaEntity areaComum;
 
     private String unidadeTexto;
@@ -43,6 +44,7 @@ public class ReservaJpaEntity {
     private String motivoRejeicao;
 
     @OneToMany(mappedBy = "reserva", cascade = CascadeType.ALL, orphanRemoval = true)
+    @org.hibernate.envers.NotAudited
     private List<ConvidadoJpaEntity> convidados;
 
 }

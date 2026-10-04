@@ -28,12 +28,12 @@ public class SecurityFilter extends OncePerRequestFilter {
         var token = this.recoverToken(request);
         if (token != null) {
             var email = tokenService.validateToken(token);
-            var usuarioOpt = usuarioRepository.findByEmail(email);
-
-            if (usuarioOpt.isPresent()) {
-                var usuario = usuarioOpt.get();
-                var authentication = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+            // Token inválido/expirado: segue sem autenticação (as regras do SecurityConfig decidem o 401/403)
+            if (email != null) {
+                usuarioRepository.findByEmail(email).ifPresent(usuario -> {
+                    var authentication = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                });
             }
         }
         filterChain.doFilter(request, response);
@@ -41,7 +41,8 @@ public class SecurityFilter extends OncePerRequestFilter {
 
     private String recoverToken(HttpServletRequest request) {
         var authHeader = request.getHeader("Authorization");
-        if (authHeader == null) return null;
-        return authHeader.replace("Bearer ", "");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
+        var token = authHeader.substring(7).trim();
+        return token.isEmpty() ? null : token;
     }
 }
