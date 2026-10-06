@@ -10,6 +10,8 @@ import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataUsua
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataVeiculoRepository;
 import com.condoeconomy.api.presentation.dto.perfil.UsuarioResponseDTO;
 import lombok.RequiredArgsConstructor;
+import com.condoeconomy.api.presentation.dto.perfil.AtualizarDadosPessoaisRequestDTO;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -42,14 +44,16 @@ public class PerfilController {
     }
 
     @PutMapping("/dados")
-    public ResponseEntity<UsuarioResponseDTO> updateDadosPessoais(Authentication auth, @RequestBody UsuarioJpaEntity dados) {
+    public ResponseEntity<UsuarioResponseDTO> updateDadosPessoais(Authentication auth, @RequestBody @Valid AtualizarDadosPessoaisRequestDTO dados) {
         return usuarioRepository.findById(getLoggedUserId(auth))
                 .map(usuario -> {
-                    usuario.setNome(dados.getNome());
-                    usuario.setTelefone(dados.getTelefone());
-                    usuario.setApartamento(dados.getApartamento());
-                    usuario.setBloco(dados.getBloco());
-                    usuario.setFoto(dados.getFoto());
+                    usuario.setNome(dados.nome());
+                    usuario.setTelefone(dados.telefone());
+                    // Estes campos vêm do frontend, mas o ideal em condomínio é não deixar o morador mudar o próprio apto/bloco sem aprovação.
+                    // Mas mantendo compatibilidade com o frontend atual que não altera apto/bloco
+                    // usuario.setApartamento(dados.apartamento());
+                    // usuario.setBloco(dados.bloco());
+                    usuario.setFoto(dados.foto());
                     UsuarioJpaEntity saved = usuarioRepository.save(usuario);
                     return ResponseEntity.ok(UsuarioResponseDTO.fromEntity(saved));
                 })
