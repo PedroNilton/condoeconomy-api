@@ -9,6 +9,9 @@ import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataPetR
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataUsuarioRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataVeiculoRepository;
 import com.condoeconomy.api.presentation.dto.perfil.UsuarioResponseDTO;
+import com.condoeconomy.api.presentation.dto.perfil.AdicionarVeiculoRequestDTO;
+import com.condoeconomy.api.presentation.dto.perfil.AdicionarPetRequestDTO;
+import com.condoeconomy.api.presentation.dto.perfil.AdicionarMoradorRequestDTO;
 import lombok.RequiredArgsConstructor;
 import com.condoeconomy.api.presentation.dto.perfil.AtualizarDadosPessoaisRequestDTO;
 import jakarta.validation.Valid;
@@ -67,8 +70,12 @@ public class PerfilController {
     }
 
     @PostMapping("/veiculos")
-    public ResponseEntity<VeiculoJpaEntity> addVeiculo(Authentication auth, @RequestBody VeiculoJpaEntity veiculo) {
+    public ResponseEntity<VeiculoJpaEntity> addVeiculo(Authentication auth, @RequestBody @Valid AdicionarVeiculoRequestDTO dto) {
+        VeiculoJpaEntity veiculo = new VeiculoJpaEntity();
         veiculo.setUsuarioId(getLoggedUserId(auth));
+        veiculo.setPlaca(dto.placa());
+        veiculo.setModelo(dto.modelo());
+        veiculo.setCor(dto.cor());
         return ResponseEntity.ok(veiculoRepository.save(veiculo));
     }
 
@@ -89,8 +96,12 @@ public class PerfilController {
     }
 
     @PostMapping("/pets")
-    public ResponseEntity<PetJpaEntity> addPet(Authentication auth, @RequestBody PetJpaEntity pet) {
+    public ResponseEntity<PetJpaEntity> addPet(Authentication auth, @RequestBody @Valid AdicionarPetRequestDTO dto) {
+        PetJpaEntity pet = new PetJpaEntity();
         pet.setUsuarioId(getLoggedUserId(auth));
+        pet.setNome(dto.nome());
+        pet.setEspecie(dto.especie());
+        pet.setRaca(dto.raca());
         return ResponseEntity.ok(petRepository.save(pet));
     }
 
@@ -111,8 +122,11 @@ public class PerfilController {
     }
 
     @PostMapping("/moradores")
-    public ResponseEntity<MoradorAdicionalJpaEntity> addMorador(Authentication auth, @RequestBody MoradorAdicionalJpaEntity morador) {
+    public ResponseEntity<MoradorAdicionalJpaEntity> addMorador(Authentication auth, @RequestBody @Valid AdicionarMoradorRequestDTO dto) {
+        MoradorAdicionalJpaEntity morador = new MoradorAdicionalJpaEntity();
         morador.setUsuarioId(getLoggedUserId(auth));
+        morador.setNome(dto.nome());
+        morador.setParentesco(dto.parentesco());
         return ResponseEntity.ok(moradorAdicionalRepository.save(morador));
     }
 
