@@ -64,6 +64,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/v1/visitantes/*/checkin", "/api/v1/visitantes/*/checkout").hasAnyRole(STAFF)
 
                         // --- Encomendas ---
+                        .requestMatchers(HttpMethod.GET, "/api/v1/encomendas/minhas").hasRole("MORADOR")
                         .requestMatchers(HttpMethod.GET, "/api/v1/encomendas").hasAnyRole(STAFF)
                         .requestMatchers(HttpMethod.POST, "/api/v1/encomendas").hasRole("PORTEIRO")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/encomendas/*/retirar").hasAnyRole(STAFF)
@@ -72,11 +73,16 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/avisos").hasRole("SINDICO")
 
                         // --- Reservas ---
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reservas/minhas", "/api/v1/reservas/areas-comuns").hasAnyRole(STAFF_OU_MORADOR)
                         .requestMatchers(HttpMethod.GET, "/api/v1/reservas").hasAnyRole(STAFF)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/reservas").hasRole("MORADOR")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/reservas/*/aprovar", "/api/v1/reservas/*/rejeitar").hasAnyRole("SINDICO", "PORTEIRO")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/reservas/*/convidados/*/checkin").hasAnyRole(STAFF)
 
                         // --- Chamados (Ouvidoria) ---
+                        .requestMatchers(HttpMethod.GET, "/api/v1/chamados/meus").hasRole("MORADOR")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/chamados").hasAnyRole(STAFF)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/chamados").hasAnyRole(STAFF_OU_MORADOR)
                         .requestMatchers(HttpMethod.PUT, "/api/v1/chamados/*/escalar").hasRole("PORTEIRO")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/chamados/*/status").hasAnyRole(STAFF)
 

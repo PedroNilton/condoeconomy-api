@@ -8,4 +8,5 @@ import java.util.UUID;
 
 public interface SpringDataChamadoRepository extends JpaRepository<ChamadoJpaEntity, UUID> {
     List<ChamadoJpaEntity> findAllByOrderByDataAberturaDesc();
+    List<ChamadoJpaEntity> findByMoradorSolicitanteOrderByDataAberturaDesc(String moradorSolicitante);
 }

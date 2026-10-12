@@ -26,6 +26,12 @@ public class ChamadoRepositoryImpl implements ChamadoRepository {
     }
 
     @Override
+    public List<Chamado> buscarPorMorador(String moradorSolicitante) {
+        return db.findByMoradorSolicitanteOrderByDataAberturaDesc(moradorSolicitante)
+                .stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public Optional<Chamado> buscarPorId(UUID id) {
         return db.findById(id).map(this::toDomain);
     }

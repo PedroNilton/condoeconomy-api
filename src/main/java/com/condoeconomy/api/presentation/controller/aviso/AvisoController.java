@@ -27,7 +27,11 @@ public class AvisoController {
     }
 
     @PostMapping
-    public ResponseEntity<AvisoResponseDTO> criar(@RequestBody @Valid CriarAvisoRequestDTO data) {
-        return ResponseEntity.ok(criarAvisoUseCase.execute(data));
+    public ResponseEntity<AvisoResponseDTO> criar(@RequestBody @Valid CriarAvisoRequestDTO data, org.springframework.security.core.Authentication auth) {
+        String autorFinal = (data.autor() != null && !data.autor().isBlank()) 
+                ? data.autor() 
+                : ((com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity) auth.getPrincipal()).getNome();
+        CriarAvisoRequestDTO saneData = new CriarAvisoRequestDTO(data.titulo(), data.mensagem(), autorFinal);
+        return ResponseEntity.ok(criarAvisoUseCase.execute(saneData));
     }
 }

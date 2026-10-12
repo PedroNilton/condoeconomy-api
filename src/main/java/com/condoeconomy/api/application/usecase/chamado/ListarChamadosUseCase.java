@@ -17,4 +17,8 @@ public class ListarChamadosUseCase {
     public List<Chamado> executar() {
         return chamadoRepository.buscarTodos();
     }
+
+    public List<Chamado> executarPorMorador(String moradorSolicitante) {
+        return chamadoRepository.buscarPorMorador(moradorSolicitante);
+    }
 }
