@@ -4,6 +4,7 @@ import com.condoeconomy.api.infrastructure.persistence.entity.PushSubscriptionJp
 import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataPushSubscriptionRepository;
 import com.condoeconomy.api.presentation.dto.push.PushSubscriptionRequestDTO;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -19,7 +20,7 @@ public class PushSubscriptionController {
 
     @PostMapping("/subscribe")
     @Transactional
-    public ResponseEntity<Void> subscribe(Authentication auth, @RequestBody PushSubscriptionRequestDTO dto) {
+    public ResponseEntity<Void> subscribe(Authentication auth, @RequestBody @Valid PushSubscriptionRequestDTO dto) {
         UsuarioJpaEntity user = (UsuarioJpaEntity) auth.getPrincipal();
         
         // Remove old if exists

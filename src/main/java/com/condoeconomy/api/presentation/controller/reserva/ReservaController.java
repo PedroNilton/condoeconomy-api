@@ -124,7 +124,7 @@ public class ReservaController {
     }
 
     @PutMapping("/{id}/rejeitar")
-    public ResponseEntity<Void> rejeitar(@PathVariable UUID id, @RequestBody(required = false) RejeitarReservaRequestDTO dto) {
+    public ResponseEntity<Void> rejeitar(@PathVariable UUID id, @RequestBody(required = false) @Valid RejeitarReservaRequestDTO dto) {
         String motivo = dto != null ? dto.motivo() : null;
         aprovarRejeitarReservaUseCase.rejeitar(id, motivo);
         return ResponseEntity.noContent().build();

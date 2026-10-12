@@ -5,6 +5,7 @@ import com.condoeconomy.api.application.usecase.visitante.CriarVisitanteUseCase;
 import com.condoeconomy.api.application.usecase.visitante.ListarVisitantesUseCase;
 import com.condoeconomy.api.presentation.dto.visitante.CriarVisitanteRequestDTO;
 import com.condoeconomy.api.presentation.dto.visitante.VisitanteResponseDTO;
+import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,7 +43,7 @@ public class VisitanteController {
     }
 
     @PostMapping
-    public ResponseEntity<VisitanteResponseDTO> criar(@RequestBody CriarVisitanteRequestDTO request) {
+    public ResponseEntity<VisitanteResponseDTO> criar(@RequestBody @Valid CriarVisitanteRequestDTO request) {
         var visitante = criarVisitanteUseCase.executar(
                 request.nome(),
                 request.sobrenome(),

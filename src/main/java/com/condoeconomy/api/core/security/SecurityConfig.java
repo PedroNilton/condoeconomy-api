@@ -27,6 +27,7 @@ public class SecurityConfig {
 
     /** Papéis da equipe do condomínio (operam portaria / administração). */
     private static final String[] STAFF = {"PORTEIRO", "SINDICO", "ADMIN", "SUPER_ADMIN"};
+    private static final String[] STAFF_OU_MORADOR = {"MORADOR", "PORTEIRO", "SINDICO", "ADMIN", "SUPER_ADMIN"};
     /** Papéis com poder de gestão (financeiro, status de chamados). */
     private static final String[] GESTAO = {"SINDICO", "ADMIN", "SUPER_ADMIN"};
 
@@ -57,8 +58,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/condominios").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/condostore/pedidos").hasRole("MORADOR")
 
-                        // --- Visitantes ---
-                        .requestMatchers(HttpMethod.POST, "/api/v1/visitantes").hasRole("MORADOR")
+                        // --- Visitantes (POST público para Auto Check-in via QR Code na portaria) ---
+                        .requestMatchers(HttpMethod.POST, "/api/v1/visitantes").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/visitantes").hasAnyRole(STAFF_OU_MORADOR)
                         .requestMatchers(HttpMethod.PUT, "/api/v1/visitantes/*/checkin", "/api/v1/visitantes/*/checkout").hasAnyRole(STAFF)
 
                         // --- Encomendas ---
