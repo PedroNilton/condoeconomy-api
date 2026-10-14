@@ -37,6 +37,7 @@ public class UsuarioJpaEntity implements UserDetails {
     private String apartamento;
     private String bloco;
     private String foto;
+    private int tokenVersion = 1;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

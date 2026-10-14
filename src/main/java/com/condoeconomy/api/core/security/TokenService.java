@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.Instant;
 
+import com.auth0.jwt.interfaces.DecodedJWT;
+
 @Service
 public class TokenService {
 
@@ -42,6 +44,7 @@ public class TokenService {
                     .withIssuer(ISSUER)
                     .withSubject(usuario.getEmail())
                     .withClaim("papel", usuario.getPapel())
+                    .withClaim("tokenVersion", usuario.getTokenVersion())
                     .withIssuedAt(Instant.now())
                     .withExpiresAt(genExpirationDate())
                     .sign(algorithm);
@@ -50,17 +53,21 @@ public class TokenService {
         }
     }
 
-    public String validateToken(String token) {
+    public DecodedJWT verifyAndDecode(String token) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.require(algorithm)
                     .withIssuer(ISSUER)
                     .build()
-                    .verify(token)
-                    .getSubject();
+                    .verify(token);
         } catch (JWTVerificationException exception) {
             return null;
         }
+    }
+
+    public String validateToken(String token) {
+        DecodedJWT decoded = verifyAndDecode(token);
+        return decoded != null ? decoded.getSubject() : null;
     }
 
     private Instant genExpirationDate() {

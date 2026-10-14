@@ -27,13 +27,23 @@ public class SecurityFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         var token = this.recoverToken(request);
         if (token != null) {
-            var email = tokenService.validateToken(token);
-            // Token inválido/expirado: segue sem autenticação (as regras do SecurityConfig decidem o 401/403)
-            if (email != null) {
-                usuarioRepository.findByEmail(email).ifPresent(usuario -> {
-                    var authentication = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                });
+            var decoded = tokenService.verifyAndDecode(token);
+            if (decoded != null) {
+                var email = decoded.getSubject();
+                var claimVersion = decoded.getClaim("tokenVersion");
+                Integer tokenVersion = claimVersion.isNull() ? null : claimVersion.asInt();
+
+                if (email != null) {
+                    usuarioRepository.findByEmail(email).ifPresent(usuario -> {
+                        // Barreira de revogação imediata (Token Kill Switch):
+                        // Se o tokenVersion for nulo (token legado pré-migração) ou igual à versão atual, autentica.
+                        // Caso a senha tenha sido alterada ou sessões encerradas, a versão diverge e o acesso é cortado na hora.
+                        if (tokenVersion == null || tokenVersion == usuario.getTokenVersion()) {
+                            var authentication = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
+                            SecurityContextHolder.getContext().setAuthentication(authentication);
+                        }
+                    });
+                }
             }
         }
         filterChain.doFilter(request, response);

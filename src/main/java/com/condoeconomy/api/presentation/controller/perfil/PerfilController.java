@@ -22,6 +22,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+import com.condoeconomy.api.core.security.SecuritySanitizer;
+import com.condoeconomy.api.core.security.TokenService;
+import com.condoeconomy.api.presentation.dto.perfil.AlterarSenhaRequestDTO;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/perfil")
 @RequiredArgsConstructor
@@ -31,10 +38,70 @@ public class PerfilController {
     private final SpringDataPetRepository petRepository;
     private final SpringDataMoradorAdicionalRepository moradorAdicionalRepository;
     private final SpringDataUsuarioRepository usuarioRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final TokenService tokenService;
 
     private UUID getLoggedUserId(Authentication authentication) {
         UsuarioJpaEntity user = (UsuarioJpaEntity) authentication.getPrincipal();
         return user.getId();
+    }
+
+    // --- SEGURANÇA / STEP-UP AUTH & REVOGAÇÃO DE SESSÕES ---
+
+    @PutMapping("/seguranca/alterar-senha")
+    public ResponseEntity<?> alterarSenha(Authentication auth, @RequestBody @Valid AlterarSenhaRequestDTO dto) {
+        return usuarioRepository.findById(getLoggedUserId(auth))
+                .map(usuario -> {
+                    // 1. Step-up Auth: validação estrita da senha atual
+                    if (!passwordEncoder.matches(dto.senhaAtual(), usuario.getSenha())) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(Map.of("message", "A senha atual informada está incorreta."));
+                    }
+
+                    // 2. Impede reuso imediato da mesma senha
+                    if (passwordEncoder.matches(dto.novaSenha(), usuario.getSenha())) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(Map.of("message", "A nova senha deve ser diferente da senha atual."));
+                    }
+
+                    // 3. Sanitização contra caracteres de controle
+                    SecuritySanitizer.validarTextoSeguro(dto.novaSenha(), "novaSenha");
+
+                    // 4. Criptografia BCrypt da nova credencial
+                    usuario.setSenha(passwordEncoder.encode(dto.novaSenha()));
+
+                    // 5. Invalidação imediata de todas as outras sessões (Token Kill Switch)
+                    usuario.setTokenVersion(usuario.getTokenVersion() + 1);
+                    usuarioRepository.save(usuario);
+
+                    // 6. Emissão de novo token para manter a sessão do dispositivo atual
+                    String novoToken = tokenService.generateToken(usuario);
+
+                    return ResponseEntity.ok(Map.of(
+                            "message", "Senha alterada com sucesso! Todas as outras sessões foram desconectadas por segurança.",
+                            "token", novoToken
+                    ));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/seguranca/encerrar-sessoes")
+    public ResponseEntity<?> encerrarOutrasSessoes(Authentication auth) {
+        return usuarioRepository.findById(getLoggedUserId(auth))
+                .map(usuario -> {
+                    // Incrementa tokenVersion, invalidando instantaneamente qualquer JWT emitido anteriormente
+                    usuario.setTokenVersion(usuario.getTokenVersion() + 1);
+                    usuarioRepository.save(usuario);
+
+                    // Emite um novo token válido exclusivamente para a sessão ativa
+                    String novoToken = tokenService.generateToken(usuario);
+
+                    return ResponseEntity.ok(Map.of(
+                            "message", "Todas as outras sessões foram encerradas com sucesso.",
+                            "token", novoToken
+                    ));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     // --- DADOS PESSOAIS ---
