@@ -13,8 +13,28 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public org.springframework.http.ResponseEntity<?> handleAuthenticationException(org.springframework.security.core.AuthenticationException ex) {
+        return org.springframework.http.ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(java.util.Map.of("message", "E-mail ou senha inválidos."));
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ProblemDetail handleMalformedJson(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                "Formato de requisição inválido ou JSON malformado."
+        );
+        problemDetail.setTitle("Requisição Inválida");
+        problemDetail.setType(URI.create("https://condoeconomy.com/erros/bad-request"));
+        return problemDetail;
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleSecurityAndGenericExceptions(Exception ex) {
+        log.error("Exceção não tratada capturada pelo GlobalExceptionHandler: {}", ex.getMessage(), ex);
         // Prevent leaking stack traces and sensitive internal server errors
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.INTERNAL_SERVER_ERROR,
