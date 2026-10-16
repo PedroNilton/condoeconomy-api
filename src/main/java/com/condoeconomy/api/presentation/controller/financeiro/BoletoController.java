@@ -15,6 +15,8 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/boletos")
 public class BoletoController {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BoletoController.class);
+
     private final ListarBoletosUseCase listarBoletosUseCase;
     private final DarBaixaBoletoUseCase darBaixaBoletoUseCase;
 
@@ -44,7 +46,8 @@ public class BoletoController {
     }
 
     @PutMapping("/{id}/baixar")
-    public ResponseEntity<BoletoResponseDTO> darBaixa(@PathVariable UUID id) {
+    public ResponseEntity<BoletoResponseDTO> darBaixa(@PathVariable UUID id, Authentication auth) {
+        log.info("Auditoria financeira: baixa manual registrada no boleto ID {} pelo operador {}", id, auth != null ? auth.getName() : "ANONYMOUS");
         var boleto = darBaixaBoletoUseCase.executar(id);
         return ResponseEntity.ok(BoletoResponseDTO.fromEntity(boleto));
     }

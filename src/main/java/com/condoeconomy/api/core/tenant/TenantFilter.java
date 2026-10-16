@@ -14,6 +14,7 @@ import java.io.IOException;
 public class TenantFilter implements Filter {
 
     private static final String TENANT_HEADER = "X-Tenant-ID";
+    private static final java.util.regex.Pattern TENANT_PATTERN = java.util.regex.Pattern.compile("^[a-zA-Z0-9_]{1,63}$");
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -22,8 +23,9 @@ public class TenantFilter implements Filter {
         HttpServletRequest req = (HttpServletRequest) request;
         String tenantId = req.getHeader(TENANT_HEADER);
         
-        if (tenantId != null && !tenantId.isBlank()) {
-            TenantContext.setCurrentTenant(tenantId);
+        // Validação estrita: aceita apenas caracteres alfanuméricos e underscore (evita SQL Injection / schema tampering)
+        if (tenantId != null && !tenantId.isBlank() && TENANT_PATTERN.matcher(tenantId.trim()).matches()) {
+            TenantContext.setCurrentTenant(tenantId.trim().toLowerCase());
         } else {
             TenantContext.setCurrentTenant(TenantIdentifierResolver.DEFAULT_TENANT);
         }
