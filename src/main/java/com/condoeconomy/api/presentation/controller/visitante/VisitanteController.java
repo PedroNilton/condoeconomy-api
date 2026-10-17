@@ -3,6 +3,7 @@ package com.condoeconomy.api.presentation.controller.visitante;
 import com.condoeconomy.api.application.usecase.visitante.AlterarStatusVisitanteUseCase;
 import com.condoeconomy.api.application.usecase.visitante.CriarVisitanteUseCase;
 import com.condoeconomy.api.application.usecase.visitante.ListarVisitantesUseCase;
+import com.condoeconomy.api.core.security.SecuritySanitizer;
 import com.condoeconomy.api.presentation.dto.visitante.CriarVisitanteRequestDTO;
 import com.condoeconomy.api.presentation.dto.visitante.VisitanteResponseDTO;
 import jakarta.validation.Valid;
@@ -44,12 +45,20 @@ public class VisitanteController {
 
     @PostMapping
     public ResponseEntity<VisitanteResponseDTO> criar(@RequestBody @Valid CriarVisitanteRequestDTO request) {
+        SecuritySanitizer.validarTextoSeguro(request.nome(), "nome");
+        SecuritySanitizer.validarTextoSeguro(request.sobrenome(), "sobrenome");
+        SecuritySanitizer.validarTextoSeguro(request.blocoDestino(), "blocoDestino");
+        SecuritySanitizer.validarTextoSeguro(request.unidadeDestino(), "unidadeDestino");
+        if (request.placaVeiculo() != null && !request.placaVeiculo().isBlank()) {
+            SecuritySanitizer.validarTextoSeguro(request.placaVeiculo(), "placaVeiculo");
+        }
+
         var visitante = criarVisitanteUseCase.executar(
-                request.nome(),
-                request.sobrenome(),
-                request.blocoDestino(),
-                request.unidadeDestino(),
-                request.placaVeiculo()
+                SecuritySanitizer.sanitizar(request.nome()),
+                SecuritySanitizer.sanitizar(request.sobrenome()),
+                SecuritySanitizer.sanitizar(request.blocoDestino()),
+                SecuritySanitizer.sanitizar(request.unidadeDestino()),
+                request.placaVeiculo() != null ? SecuritySanitizer.sanitizar(request.placaVeiculo()) : null
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(VisitanteResponseDTO.fromEntity(visitante));
     }

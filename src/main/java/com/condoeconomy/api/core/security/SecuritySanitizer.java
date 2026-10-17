@@ -59,4 +59,16 @@ public final class SecuritySanitizer {
             throw new IllegalArgumentException("Conteúdo não permitido detectado no campo " + nomeCampo + ".");
         }
     }
+
+    /**
+     * Higieniza texto removendo caracteres de controle, null bytes, tags de script/HTML e espaços extras.
+     */
+    public static String sanitizar(String input) {
+        if (input == null) {
+            return null;
+        }
+        String limpo = CONTROL_CHARS_PATTERN.matcher(input).replaceAll("");
+        limpo = limpo.replaceAll("<[^>]*>", "");
+        return limpo.trim();
+    }
 }
