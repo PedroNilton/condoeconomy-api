@@ -28,11 +28,15 @@ import com.condoeconomy.api.presentation.dto.perfil.AlterarSenhaRequestDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/v1/perfil")
 @RequiredArgsConstructor
 public class PerfilController {
+
+    private static final Logger log = LoggerFactory.getLogger(PerfilController.class);
 
     private final SpringDataVeiculoRepository veiculoRepository;
     private final SpringDataPetRepository petRepository;
@@ -54,6 +58,7 @@ public class PerfilController {
                 .map(usuario -> {
                     // 1. Step-up Auth: validação estrita da senha atual
                     if (!passwordEncoder.matches(dto.senhaAtual(), usuario.getSenha())) {
+                        log.warn("[AUDITORIA DE SEGURANÇA] Falha de Step-up Auth na troca de senha para o usuário '{}'", usuario.getEmail());
                         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                                 .body(Map.of("message", "A senha atual informada está incorreta."));
                     }
@@ -74,6 +79,9 @@ public class PerfilController {
                     usuario.setTokenVersion(usuario.getTokenVersion() + 1);
                     usuarioRepository.save(usuario);
 
+                    log.info("[AUDITORIA DE SEGURANÇA] Senha alterada e sessões anteriores revogadas (tokenVersion={}) para o usuário '{}'",
+                            usuario.getTokenVersion(), usuario.getEmail());
+
                     // 6. Emissão de novo token para manter a sessão do dispositivo atual
                     String novoToken = tokenService.generateToken(usuario);
 
@@ -92,6 +100,9 @@ public class PerfilController {
                     // Incrementa tokenVersion, invalidando instantaneamente qualquer JWT emitido anteriormente
                     usuario.setTokenVersion(usuario.getTokenVersion() + 1);
                     usuarioRepository.save(usuario);
+
+                    log.info("[AUDITORIA DE SEGURANÇA] Kill Switch acionado: todas as sessões anteriores revogadas (tokenVersion={}) para o usuário '{}'",
+                            usuario.getTokenVersion(), usuario.getEmail());
 
                     // Emite um novo token válido exclusivamente para a sessão ativa
                     String novoToken = tokenService.generateToken(usuario);
@@ -115,10 +126,14 @@ public class PerfilController {
 
     @PutMapping("/dados")
     public ResponseEntity<UsuarioResponseDTO> updateDadosPessoais(Authentication auth, @RequestBody @Valid AtualizarDadosPessoaisRequestDTO dados) {
+        SecuritySanitizer.validarTextoSeguro(dados.nome(), "nome");
+        SecuritySanitizer.validarTextoSeguro(dados.telefone(), "telefone");
+        SecuritySanitizer.validarUrlFotoSegura(dados.foto());
+
         return usuarioRepository.findById(getLoggedUserId(auth))
                 .map(usuario -> {
-                    usuario.setNome(dados.nome());
-                    usuario.setTelefone(dados.telefone());
+                    usuario.setNome(SecuritySanitizer.sanitizar(dados.nome()));
+                    usuario.setTelefone(dados.telefone() != null ? SecuritySanitizer.sanitizar(dados.telefone()) : null);
                     // Estes campos vêm do frontend, mas o ideal em condomínio é não deixar o morador mudar o próprio apto/bloco sem aprovação.
                     // Mas mantendo compatibilidade com o frontend atual que não altera apto/bloco
                     // usuario.setApartamento(dados.apartamento());
@@ -138,11 +153,15 @@ public class PerfilController {
 
     @PostMapping("/veiculos")
     public ResponseEntity<VeiculoJpaEntity> addVeiculo(Authentication auth, @RequestBody @Valid AdicionarVeiculoRequestDTO dto) {
+        SecuritySanitizer.validarTextoSeguro(dto.placa(), "placa");
+        SecuritySanitizer.validarTextoSeguro(dto.modelo(), "modelo");
+        SecuritySanitizer.validarTextoSeguro(dto.cor(), "cor");
+
         VeiculoJpaEntity veiculo = new VeiculoJpaEntity();
         veiculo.setUsuarioId(getLoggedUserId(auth));
-        veiculo.setPlaca(dto.placa());
-        veiculo.setModelo(dto.modelo());
-        veiculo.setCor(dto.cor());
+        veiculo.setPlaca(SecuritySanitizer.sanitizar(dto.placa()).toUpperCase());
+        veiculo.setModelo(SecuritySanitizer.sanitizar(dto.modelo()));
+        veiculo.setCor(SecuritySanitizer.sanitizar(dto.cor()));
         return ResponseEntity.ok(veiculoRepository.save(veiculo));
     }
 
@@ -164,11 +183,15 @@ public class PerfilController {
 
     @PostMapping("/pets")
     public ResponseEntity<PetJpaEntity> addPet(Authentication auth, @RequestBody @Valid AdicionarPetRequestDTO dto) {
+        SecuritySanitizer.validarTextoSeguro(dto.nome(), "nome");
+        SecuritySanitizer.validarTextoSeguro(dto.especie(), "especie");
+        SecuritySanitizer.validarTextoSeguro(dto.raca(), "raca");
+
         PetJpaEntity pet = new PetJpaEntity();
         pet.setUsuarioId(getLoggedUserId(auth));
-        pet.setNome(dto.nome());
-        pet.setEspecie(dto.especie());
-        pet.setRaca(dto.raca());
+        pet.setNome(SecuritySanitizer.sanitizar(dto.nome()));
+        pet.setEspecie(SecuritySanitizer.sanitizar(dto.especie()));
+        pet.setRaca(dto.raca() != null ? SecuritySanitizer.sanitizar(dto.raca()) : null);
         return ResponseEntity.ok(petRepository.save(pet));
     }
 
@@ -190,10 +213,13 @@ public class PerfilController {
 
     @PostMapping("/moradores")
     public ResponseEntity<MoradorAdicionalJpaEntity> addMorador(Authentication auth, @RequestBody @Valid AdicionarMoradorRequestDTO dto) {
+        SecuritySanitizer.validarTextoSeguro(dto.nome(), "nome");
+        SecuritySanitizer.validarTextoSeguro(dto.parentesco(), "parentesco");
+
         MoradorAdicionalJpaEntity morador = new MoradorAdicionalJpaEntity();
         morador.setUsuarioId(getLoggedUserId(auth));
-        morador.setNome(dto.nome());
-        morador.setParentesco(dto.parentesco());
+        morador.setNome(SecuritySanitizer.sanitizar(dto.nome()));
+        morador.setParentesco(SecuritySanitizer.sanitizar(dto.parentesco()));
         return ResponseEntity.ok(moradorAdicionalRepository.save(morador));
     }
 

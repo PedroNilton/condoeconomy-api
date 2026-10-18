@@ -1,5 +1,6 @@
 package com.condoeconomy.api.presentation.controller.portaria;
 
+import com.condoeconomy.api.core.security.SecuritySanitizer;
 import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.entity.VeiculoJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataUsuarioRepository;
@@ -30,10 +31,13 @@ public class PortariaVeiculoController {
 
     @GetMapping("/consulta")
     public ResponseEntity<List<VeiculoConsultaDTO>> consultarVeiculo(@RequestParam String placa) {
+        SecuritySanitizer.validarTextoSeguro(placa, "placa");
+        String placaSanitizada = SecuritySanitizer.sanitizar(placa);
+
         // Permite buscar digitando a placa com ou sem traço
-        String busca = placa;
-        if (placa.length() == 7 && !placa.contains("-")) {
-            busca = placa.substring(0, 3) + "-" + placa.substring(3);
+        String busca = placaSanitizada;
+        if (placaSanitizada.length() == 7 && !placaSanitizada.contains("-")) {
+            busca = placaSanitizada.substring(0, 3) + "-" + placaSanitizada.substring(3);
         }
         
         List<VeiculoJpaEntity> veiculos = veiculoRepository.findByPlacaContainingIgnoreCase(busca);

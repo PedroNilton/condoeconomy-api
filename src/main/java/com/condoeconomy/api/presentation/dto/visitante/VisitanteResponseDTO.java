@@ -1,5 +1,6 @@
 package com.condoeconomy.api.presentation.dto.visitante;
 
+import com.condoeconomy.api.core.security.SecuritySanitizer;
 import com.condoeconomy.api.domain.entity.visitante.Visitante;
 
 import java.time.LocalDate;
@@ -26,7 +27,7 @@ public record VisitanteResponseDTO(
                 entity.getId(),
                 entity.getNome(),
                 entity.getSobrenome(),
-                mascararDocumento(entity.getDocumento()),
+                SecuritySanitizer.mascararDocumento(entity.getDocumento()),
                 entity.getDataVisita(),
                 entity.getBlocoDestino(),
                 entity.getUnidadeDestino(),
@@ -37,21 +38,5 @@ public record VisitanteResponseDTO(
                 entity.getHoraEntrada(),
                 entity.getHoraSaida()
         );
-    }
-
-    public static String mascararDocumento(String doc) {
-        if (doc == null || doc.isBlank()) {
-            return null;
-        }
-        String limpo = doc.replaceAll("[^0-9a-zA-Z]", "");
-        if (limpo.length() <= 4) {
-            return "****";
-        }
-        if (limpo.length() == 11) {
-            // Mascaramento no padrão LGPD para CPF: ***.123.456-**
-            return "***." + limpo.substring(3, 6) + "." + limpo.substring(6, 9) + "-**";
-        }
-        int len = limpo.length();
-        return "***." + limpo.substring(len - 4, len - 2) + "**";
     }
 }
