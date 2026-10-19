@@ -95,7 +95,10 @@ public class ReservaController {
     public ResponseEntity<ReservaResponseDTO> criarReserva(
             @Valid @RequestBody CriarReservaRequestDTO request, 
             Authentication auth) {
-        SecuritySanitizer.validarTextoSeguro(request.titulo(), "titulo");
+        String tituloBruto = (request.titulo() != null && !request.titulo().isBlank())
+                ? request.titulo()
+                : "Reserva de Área Comum";
+        SecuritySanitizer.validarTextoSeguro(tituloBruto, "titulo");
 
         com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity user = 
             (com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity) auth.getPrincipal();
@@ -107,10 +110,12 @@ public class ReservaController {
                 ? request.convidados().stream()
                     .map(c -> {
                         SecuritySanitizer.validarTextoSeguro(c.nome(), "nomeConvidado");
-                        SecuritySanitizer.validarTextoSeguro(c.documento(), "documentoConvidado");
+                        if (c.documento() != null && !c.documento().isBlank()) {
+                            SecuritySanitizer.validarTextoSeguro(c.documento(), "documentoConvidado");
+                        }
                         return new CriarReservaUseCase.ConvidadoDtoInput(
                                 SecuritySanitizer.sanitizar(c.nome()),
-                                SecuritySanitizer.sanitizar(c.documento())
+                                c.documento() != null ? SecuritySanitizer.sanitizar(c.documento()) : "N/A"
                         );
                     })
                     .collect(Collectors.toList())
@@ -120,7 +125,7 @@ public class ReservaController {
                 request.areaComumId(),
                 unidade,
                 morador,
-                SecuritySanitizer.sanitizar(request.titulo()),
+                SecuritySanitizer.sanitizar(tituloBruto),
                 request.data(),
                 request.inicio(),
                 request.fim(),

@@ -9,9 +9,9 @@ import java.util.UUID;
 
 public record CriarReservaRequestDTO(
     @NotNull UUID areaComumId,
-    @NotBlank String unidade,
-    @NotBlank String morador,
-    @NotBlank String titulo,
+    String unidade,
+    String morador,
+    String titulo,
     @NotNull LocalDate data,
     @NotNull LocalTime inicio,
     @NotNull LocalTime fim,
