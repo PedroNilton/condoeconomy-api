@@ -4,21 +4,23 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+
 import java.util.Arrays;
 
 @Configuration
@@ -48,6 +50,12 @@ public class SecurityConfig {
                 .headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
                         .contentTypeOptions(Customizer.withDefaults())
+                        .referrerPolicy(referrer -> referrer
+                                .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        .contentSecurityPolicy(csp -> csp
+                                .policyDirectives("default-src 'self'; frame-ancestors 'none'; form-action 'self'"))
+                        .permissionsPolicy(permissions -> permissions
+                                .policy("geolocation=(), microphone=(), camera=()"))
                 )
                 .authorizeHttpRequests(authorize -> authorize
                         // --- Públicos ---
@@ -62,10 +70,10 @@ public class SecurityConfig {
 
                         // --- Condomínio / CondoStore ---
                         .requestMatchers(HttpMethod.POST, "/api/v1/condominios").hasRole("SUPER_ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/condostore/pedidos").hasRole("MORADOR")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/condostore/pedidos", "/api/v1/store/pedidos").hasRole("MORADOR")
 
                         // --- Visitantes (POST público para Auto Check-in via QR Code na portaria) ---
-                        .requestMatchers(HttpMethod.POST, "/api/v1/visitantes").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/visitantes", "/api/v1/public/visitantes").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/visitantes").hasAnyRole(STAFF_OU_MORADOR)
                         .requestMatchers(HttpMethod.PUT, "/api/v1/visitantes/*/checkin", "/api/v1/visitantes/*/checkout").hasAnyRole(STAFF)
 
@@ -92,9 +100,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/v1/chamados/*/escalar").hasRole("PORTEIRO")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/chamados/*/status").hasAnyRole(STAFF)
 
-                        // --- Financeiro ---
+                        // --- Financeiro & Auditoria ---
                         .requestMatchers(HttpMethod.PUT, "/api/v1/boletos/*/baixar").hasAnyRole(GESTAO)
                         .requestMatchers("/api/v1/financas/**").hasAnyRole(GESTAO)
+                        .requestMatchers("/api/v1/admin/auditoria/**").hasAnyRole(GESTAO)
 
                         .anyRequest().authenticated()
                 )
@@ -116,11 +125,10 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "https://app.condoeconomy.com"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Tenant-ID", "X-Step-Up-Password"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }
-

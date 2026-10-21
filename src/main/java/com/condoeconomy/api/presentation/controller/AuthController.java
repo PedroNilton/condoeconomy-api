@@ -1,9 +1,10 @@
 package com.condoeconomy.api.presentation.controller;
 
 import com.condoeconomy.api.core.security.LoginAttemptService;
+import com.condoeconomy.api.core.security.SecurityAuditService;
+import com.condoeconomy.api.core.security.SecuritySanitizer;
 import com.condoeconomy.api.core.security.TokenService;
 import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
-import com.condoeconomy.api.core.security.SecuritySanitizer;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -32,13 +33,16 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final TokenService tokenService;
     private final LoginAttemptService loginAttemptService;
+    private final SecurityAuditService auditService;
 
     public AuthController(AuthenticationManager authenticationManager,
                           TokenService tokenService,
-                          LoginAttemptService loginAttemptService) {
+                          LoginAttemptService loginAttemptService,
+                          SecurityAuditService auditService) {
         this.authenticationManager = authenticationManager;
         this.tokenService = tokenService;
         this.loginAttemptService = loginAttemptService;
+        this.auditService = auditService;
     }
 
     public record LoginRequestDTO(
@@ -64,12 +68,16 @@ public class AuthController {
         if (SecuritySanitizer.contemPadroesMaliciosos(data.email()) || SecuritySanitizer.contemPadroesMaliciosos(data.senha())) {
             log.warn("Alerta de segurança: Tentativa de injeção interceptada na autenticação. IP: {}, Identificador fornecido: {}", ip, data.email());
             loginAttemptService.registrarFalha(data.email(), ip);
+            auditService.registrar(null, data.email(), "N/A", "TENTATIVA_INJECAO_LOGIN", "CRITICO", ip,
+                    "Payload malicioso bloqueado na tela de login.");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "Entrada inválida ou caracteres proibidos detectados."));
         }
 
         // 2. Proteção contra ataques de força bruta
         if (loginAttemptService.estaBloqueado(data.email(), ip)) {
+            auditService.registrar(null, data.email(), "N/A", "LOGIN_BLOQUEADO_FORCA_BRUTA", "ALERTA", ip,
+                    "Acesso bloqueado temporariamente após múltiplas falhas consecutivas.");
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("message", "Muitas tentativas de login. Tente novamente em alguns minutos."));
         }
@@ -81,10 +89,14 @@ public class AuthController {
             var usuario = (UsuarioJpaEntity) auth.getPrincipal();
             var token = tokenService.generateToken(usuario);
             loginAttemptService.registrarSucesso(data.email(), ip);
+            auditService.registrarUsuario(usuario, "LOGIN_SUCESSO", "INFO", ip,
+                    "Autenticação realizada com sucesso (tokenVersion=" + usuario.getTokenVersion() + ").");
 
             return ResponseEntity.ok(new LoginResponseDTO(token, usuario.getPapel(), usuario.getNome()));
         } catch (AuthenticationException e) {
             loginAttemptService.registrarFalha(data.email(), ip);
+            auditService.registrar(null, data.email(), "N/A", "LOGIN_FALHA", "ALERTA", ip,
+                    "Tentativa de login com credenciais inválidas.");
             // Mensagem genérica: não revela se o e-mail existe ou se a senha está errada
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "E-mail ou senha inválidos."));

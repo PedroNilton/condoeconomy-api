@@ -51,4 +51,21 @@ public class LoginAttemptService {
     public void registrarSucesso(String email, String ip) {
         cache.remove(chave(email, ip));
     }
+
+    /**
+     * Proteção contra flood/abuso em endpoints públicos (ex: Auto Check-in na portaria via QR Code).
+     * Limita a quantidade máxima de requisições por IP dentro de uma janela de 5 minutos.
+     */
+    public boolean verificarEContabilizarRequisicaoPublica(String ip, String recurso, int maxPorCincoMinutos) {
+        String key = "PUBLIC_RATE|" + recurso + "|" + (ip == null ? "unknown" : ip);
+        Duration janelaPublica = Duration.ofMinutes(5);
+        Tentativas t = cache.compute(key, (k, atual) -> {
+            Instant agora = Instant.now();
+            if (atual == null || agora.isAfter(atual.primeiraFalha().plus(janelaPublica))) {
+                return new Tentativas(1, agora);
+            }
+            return new Tentativas(atual.falhas() + 1, atual.primeiraFalha());
+        });
+        return t.falhas() <= maxPorCincoMinutos;
+    }
 }

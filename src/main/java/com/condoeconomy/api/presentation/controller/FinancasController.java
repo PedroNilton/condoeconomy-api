@@ -1,5 +1,7 @@
 package com.condoeconomy.api.presentation.controller;
 
+import com.condoeconomy.api.core.security.SecurityAuditService;
+import com.condoeconomy.api.infrastructure.persistence.entity.AuditoriaSegurancaJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.repository.financeiro.SpringDataBoletoRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.financeiro.SpringDataDespesaRepository;
 import com.condoeconomy.api.presentation.dto.financeiro.DashboardFinanceiroResponse;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
@@ -21,18 +24,19 @@ public class FinancasController {
 
     private final SpringDataBoletoRepository boletoRepository;
     private final SpringDataDespesaRepository despesaRepository;
+    private final SecurityAuditService auditService;
 
     @GetMapping("/dashboard")
-    @PreAuthorize("hasRole('SINDICO')")
+    @PreAuthorize("hasAnyRole('ROLE_SINDICO', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<DashboardFinanceiroResponse> getDashboard() {
-        
+
         BigDecimal totalEsperado = boletoRepository.sumTotalEsperado();
         BigDecimal totalPago = boletoRepository.sumTotalPago();
         BigDecimal totalDespesas = despesaRepository.sumTotalDespesas();
-        
+
         Long inadimplentes = boletoRepository.countUnidadesInadimplentes();
         Long totalUnidades = boletoRepository.countTotalUnidades();
-        
+
         if (totalEsperado == null) totalEsperado = BigDecimal.ZERO;
         if (totalPago == null) totalPago = BigDecimal.ZERO;
         if (totalDespesas == null) totalDespesas = BigDecimal.ZERO;
@@ -42,7 +46,7 @@ public class FinancasController {
         double inadimplenciaPct = ((double) inadimplentes / totalUnidades) * 100.0;
         inadimplenciaPct = Math.round(inadimplenciaPct * 10.0) / 10.0; // 1 decimal place
 
-        var boletos = boletoRepository.findTop5ByOrderByDataVencimentoDesc().stream().map(b -> 
+        var boletos = boletoRepository.findTop5ByOrderByDataVencimentoDesc().stream().map(b ->
             DashboardFinanceiroResponse.BoletoResumo.builder()
                 .id(b.getId().toString())
                 .unidade(b.getUnidadeTexto())
@@ -64,10 +68,10 @@ public class FinancasController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/boletos")
-    @PreAuthorize("hasRole('SINDICO')")
-    public ResponseEntity<java.util.List<DashboardFinanceiroResponse.BoletoResumo>> getBoletos() {
-        var boletos = boletoRepository.findAllByOrderByDataVencimentoDesc().stream().map(b -> 
+    @GetMapping({"/boletos", "/boletos-gerados"})
+    @PreAuthorize("hasAnyRole('ROLE_SINDICO', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<List<DashboardFinanceiroResponse.BoletoResumo>> getBoletos() {
+        var boletos = boletoRepository.findAllByOrderByDataVencimentoDesc().stream().map(b ->
             DashboardFinanceiroResponse.BoletoResumo.builder()
                 .id(b.getId().toString())
                 .unidade(b.getUnidadeTexto())
@@ -77,5 +81,11 @@ public class FinancasController {
                 .build()
         ).collect(Collectors.toList());
         return ResponseEntity.ok(boletos);
+    }
+
+    @GetMapping("/auditoria-seguranca")
+    @PreAuthorize("hasAnyRole('ROLE_SINDICO', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<List<AuditoriaSegurancaJpaEntity>> listarAuditoriaCondominio() {
+        return ResponseEntity.ok(auditService.listarRecentesCondominio());
     }
 }

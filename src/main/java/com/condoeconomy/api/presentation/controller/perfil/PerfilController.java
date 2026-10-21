@@ -1,5 +1,9 @@
 package com.condoeconomy.api.presentation.controller.perfil;
 
+import com.condoeconomy.api.core.security.SecurityAuditService;
+import com.condoeconomy.api.core.security.SecuritySanitizer;
+import com.condoeconomy.api.core.security.TokenService;
+import com.condoeconomy.api.infrastructure.persistence.entity.AuditoriaSegurancaJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.entity.MoradorAdicionalJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.entity.PetJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
@@ -8,28 +12,28 @@ import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataMora
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataPetRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataUsuarioRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataVeiculoRepository;
-import com.condoeconomy.api.presentation.dto.perfil.UsuarioResponseDTO;
-import com.condoeconomy.api.presentation.dto.perfil.AdicionarVeiculoRequestDTO;
-import com.condoeconomy.api.presentation.dto.perfil.AdicionarPetRequestDTO;
 import com.condoeconomy.api.presentation.dto.perfil.AdicionarMoradorRequestDTO;
-import lombok.RequiredArgsConstructor;
-import com.condoeconomy.api.presentation.dto.perfil.AtualizarDadosPessoaisRequestDTO;
-import jakarta.validation.Valid;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.UUID;
-
-import com.condoeconomy.api.core.security.SecuritySanitizer;
-import com.condoeconomy.api.core.security.TokenService;
+import com.condoeconomy.api.presentation.dto.perfil.AdicionarPetRequestDTO;
+import com.condoeconomy.api.presentation.dto.perfil.AdicionarVeiculoRequestDTO;
 import com.condoeconomy.api.presentation.dto.perfil.AlterarSenhaRequestDTO;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import java.util.Map;
+import com.condoeconomy.api.presentation.dto.perfil.AtualizarDadosPessoaisRequestDTO;
+import com.condoeconomy.api.presentation.dto.perfil.UsuarioResponseDTO;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/perfil")
@@ -44,21 +48,33 @@ public class PerfilController {
     private final SpringDataUsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
+    private final SecurityAuditService auditService;
 
     private UUID getLoggedUserId(Authentication authentication) {
         UsuarioJpaEntity user = (UsuarioJpaEntity) authentication.getPrincipal();
         return user.getId();
     }
 
-    // --- SEGURANÇA / STEP-UP AUTH & REVOGAÇÃO DE SESSÕES ---
+    // --- SEGURANÇA / STEP-UP AUTH, REVOGAÇÃO DE SESSÕES & TRILHA DE AUDITORIA ---
+
+    @GetMapping("/seguranca/historico")
+    public ResponseEntity<List<AuditoriaSegurancaJpaEntity>> listarHistoricoSeguranca(Authentication auth) {
+        return ResponseEntity.ok(auditService.listarPorUsuario(getLoggedUserId(auth)));
+    }
 
     @PutMapping("/seguranca/alterar-senha")
-    public ResponseEntity<?> alterarSenha(Authentication auth, @RequestBody @Valid AlterarSenhaRequestDTO dto) {
+    public ResponseEntity<?> alterarSenha(
+            Authentication auth,
+            @RequestBody @Valid AlterarSenhaRequestDTO dto,
+            HttpServletRequest request) {
+        String ip = request.getRemoteAddr();
         return usuarioRepository.findById(getLoggedUserId(auth))
                 .map(usuario -> {
                     // 1. Step-up Auth: validação estrita da senha atual
                     if (!passwordEncoder.matches(dto.senhaAtual(), usuario.getSenha())) {
                         log.warn("[AUDITORIA DE SEGURANÇA] Falha de Step-up Auth na troca de senha para o usuário '{}'", usuario.getEmail());
+                        auditService.registrarUsuario(usuario, "FALHA_STEP_UP_AUTH", "ALERTA", ip,
+                                "Tentativa de troca de senha bloqueada: senha atual incorreta.");
                         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                                 .body(Map.of("message", "A senha atual informada está incorreta."));
                     }
@@ -81,6 +97,8 @@ public class PerfilController {
 
                     log.info("[AUDITORIA DE SEGURANÇA] Senha alterada e sessões anteriores revogadas (tokenVersion={}) para o usuário '{}'",
                             usuario.getTokenVersion(), usuario.getEmail());
+                    auditService.registrarUsuario(usuario, "SENHA_ALTERADA", "INFO", ip,
+                            "Senha alterada com Step-Up Auth e sessões anteriores revogadas (tokenVersion=" + usuario.getTokenVersion() + ").");
 
                     // 6. Emissão de novo token para manter a sessão do dispositivo atual
                     String novoToken = tokenService.generateToken(usuario);
@@ -94,7 +112,8 @@ public class PerfilController {
     }
 
     @PostMapping("/seguranca/encerrar-sessoes")
-    public ResponseEntity<?> encerrarOutrasSessoes(Authentication auth) {
+    public ResponseEntity<?> encerrarOutrasSessoes(Authentication auth, HttpServletRequest request) {
+        String ip = request.getRemoteAddr();
         return usuarioRepository.findById(getLoggedUserId(auth))
                 .map(usuario -> {
                     // Incrementa tokenVersion, invalidando instantaneamente qualquer JWT emitido anteriormente
@@ -103,6 +122,8 @@ public class PerfilController {
 
                     log.info("[AUDITORIA DE SEGURANÇA] Kill Switch acionado: todas as sessões anteriores revogadas (tokenVersion={}) para o usuário '{}'",
                             usuario.getTokenVersion(), usuario.getEmail());
+                    auditService.registrarUsuario(usuario, "SESSOES_REVOGADAS_KILL_SWITCH", "ALERTA", ip,
+                            "Kill Switch acionado pelo titular: todas as outras sessões foram desconectadas (tokenVersion=" + usuario.getTokenVersion() + ").");
 
                     // Emite um novo token válido exclusivamente para a sessão ativa
                     String novoToken = tokenService.generateToken(usuario);
@@ -111,6 +132,30 @@ public class PerfilController {
                             "message", "Todas as outras sessões foram encerradas com sucesso.",
                             "token", novoToken
                     ));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // --- LGPD ART. 18: DIREITO DE ACESSO E PORTABILIDADE DOS DADOS PESSOAIS ---
+
+    @GetMapping("/lgpd/exportar-dados")
+    public ResponseEntity<?> exportarDadosLgpd(Authentication auth, HttpServletRequest request) {
+        UUID userId = getLoggedUserId(auth);
+        return usuarioRepository.findById(userId)
+                .map(usuario -> {
+                    auditService.registrarUsuario(usuario, "EXPORTACAO_DADOS_LGPD", "INFO", request.getRemoteAddr(),
+                            "Relatório de portabilidade de dados pessoais (Art. 18 LGPD) gerado pelo titular.");
+
+                    Map<String, Object> relatorio = new LinkedHashMap<>();
+                    relatorio.put("baseLegal", "Lei Geral de Proteção de Dados (Lei nº 13.709/2018) - Art. 18 (Acesso e Portabilidade)");
+                    relatorio.put("emitidoEm", LocalDateTime.now().toString());
+                    relatorio.put("titular", UsuarioResponseDTO.fromEntity(usuario));
+                    relatorio.put("veiculosCadastrados", veiculoRepository.findByUsuarioId(userId));
+                    relatorio.put("petsCadastrados", petRepository.findByUsuarioId(userId));
+                    relatorio.put("moradoresDependentes", moradorAdicionalRepository.findByUsuarioId(userId));
+                    relatorio.put("trilhaAuditoriaSeguranca", auditService.listarPorUsuario(userId));
+
+                    return ResponseEntity.ok(relatorio);
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -125,7 +170,10 @@ public class PerfilController {
     }
 
     @PutMapping("/dados")
-    public ResponseEntity<UsuarioResponseDTO> updateDadosPessoais(Authentication auth, @RequestBody @Valid AtualizarDadosPessoaisRequestDTO dados) {
+    public ResponseEntity<UsuarioResponseDTO> updateDadosPessoais(
+            Authentication auth,
+            @RequestBody @Valid AtualizarDadosPessoaisRequestDTO dados,
+            HttpServletRequest request) {
         SecuritySanitizer.validarTextoSeguro(dados.nome(), "nome");
         SecuritySanitizer.validarTextoSeguro(dados.telefone(), "telefone");
         SecuritySanitizer.validarUrlFotoSegura(dados.foto());
@@ -134,12 +182,10 @@ public class PerfilController {
                 .map(usuario -> {
                     usuario.setNome(SecuritySanitizer.sanitizar(dados.nome()));
                     usuario.setTelefone(dados.telefone() != null ? SecuritySanitizer.sanitizar(dados.telefone()) : null);
-                    // Estes campos vêm do frontend, mas o ideal em condomínio é não deixar o morador mudar o próprio apto/bloco sem aprovação.
-                    // Mas mantendo compatibilidade com o frontend atual que não altera apto/bloco
-                    // usuario.setApartamento(dados.apartamento());
-                    // usuario.setBloco(dados.bloco());
                     usuario.setFoto(dados.foto());
                     UsuarioJpaEntity saved = usuarioRepository.save(usuario);
+                    auditService.registrarUsuario(saved, "DADOS_PESSOAIS_ATUALIZADOS", "INFO", request.getRemoteAddr(),
+                            "Dados cadastrais do perfil atualizados pelo titular.");
                     return ResponseEntity.ok(UsuarioResponseDTO.fromEntity(saved));
                 })
                 .orElse(ResponseEntity.notFound().build());

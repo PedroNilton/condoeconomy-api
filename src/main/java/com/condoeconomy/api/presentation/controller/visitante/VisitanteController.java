@@ -3,10 +3,12 @@ package com.condoeconomy.api.presentation.controller.visitante;
 import com.condoeconomy.api.application.usecase.visitante.AlterarStatusVisitanteUseCase;
 import com.condoeconomy.api.application.usecase.visitante.CriarVisitanteUseCase;
 import com.condoeconomy.api.application.usecase.visitante.ListarVisitantesUseCase;
+import com.condoeconomy.api.core.security.LoginAttemptService;
 import com.condoeconomy.api.core.security.SecuritySanitizer;
 import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
 import com.condoeconomy.api.presentation.dto.visitante.CriarVisitanteRequestDTO;
 import com.condoeconomy.api.presentation.dto.visitante.VisitanteResponseDTO;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -31,13 +34,16 @@ public class VisitanteController {
     private final CriarVisitanteUseCase criarVisitanteUseCase;
     private final ListarVisitantesUseCase listarVisitantesUseCase;
     private final AlterarStatusVisitanteUseCase alterarStatusVisitanteUseCase;
+    private final LoginAttemptService loginAttemptService;
 
     public VisitanteController(CriarVisitanteUseCase criarVisitanteUseCase,
                                ListarVisitantesUseCase listarVisitantesUseCase,
-                               AlterarStatusVisitanteUseCase alterarStatusVisitanteUseCase) {
+                               AlterarStatusVisitanteUseCase alterarStatusVisitanteUseCase,
+                               LoginAttemptService loginAttemptService) {
         this.criarVisitanteUseCase = criarVisitanteUseCase;
         this.listarVisitantesUseCase = listarVisitantesUseCase;
         this.alterarStatusVisitanteUseCase = alterarStatusVisitanteUseCase;
+        this.loginAttemptService = loginAttemptService;
     }
 
     @GetMapping
@@ -72,9 +78,20 @@ public class VisitanteController {
     }
 
     @PostMapping
-    public ResponseEntity<VisitanteResponseDTO> criar(
+    public ResponseEntity<?> criar(
             @RequestBody @Valid CriarVisitanteRequestDTO request,
-            Authentication auth) {
+            Authentication auth,
+            HttpServletRequest httpRequest) {
+        // Proteção Anti-Flood (Rate Limiting por IP) para o fluxo público de Auto Check-in na portaria
+        if (auth == null || !(auth.getPrincipal() instanceof UsuarioJpaEntity)) {
+            String ip = httpRequest.getRemoteAddr();
+            if (!loginAttemptService.verificarEContabilizarRequisicaoPublica(ip, "auto-checkin-visitante", 10)) {
+                log.warn("[AUDITORIA DE SEGURANÇA] Rate Limit excedido no Auto Check-in de visitantes para o IP {}", ip);
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .body(Map.of("message", "Muitas solicitações de check-in em sequência. Aguarde alguns minutos."));
+            }
+        }
+
         SecuritySanitizer.validarTextoSeguro(request.nome(), "nome");
         SecuritySanitizer.validarTextoSeguro(request.sobrenome(), "sobrenome");
         SecuritySanitizer.validarTextoSeguro(request.blocoDestino(), "blocoDestino");

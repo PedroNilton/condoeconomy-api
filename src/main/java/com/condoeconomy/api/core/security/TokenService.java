@@ -4,6 +4,9 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.condoeconomy.api.core.tenant.TenantContext;
+import com.condoeconomy.api.core.tenant.TenantIdentifierResolver;
 import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -13,8 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
-
-import com.auth0.jwt.interfaces.DecodedJWT;
 
 @Service
 public class TokenService {
@@ -40,11 +41,16 @@ public class TokenService {
     public String generateToken(UsuarioJpaEntity usuario) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
+            String currentTenant = TenantContext.getCurrentTenant();
+            if (currentTenant == null || currentTenant.isBlank()) {
+                currentTenant = TenantIdentifierResolver.DEFAULT_TENANT;
+            }
             return JWT.create()
                     .withIssuer(ISSUER)
                     .withSubject(usuario.getEmail())
                     .withClaim("papel", usuario.getPapel())
                     .withClaim("tokenVersion", usuario.getTokenVersion())
+                    .withClaim("tenantId", currentTenant)
                     .withIssuedAt(Instant.now())
                     .withExpiresAt(genExpirationDate())
                     .sign(algorithm);
