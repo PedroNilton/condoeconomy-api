@@ -12,6 +12,7 @@ import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataMora
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataPetRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataUsuarioRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataVeiculoRepository;
+import com.condoeconomy.api.presentation.controller.AuthController;
 import com.condoeconomy.api.presentation.dto.perfil.AdicionarMoradorRequestDTO;
 import com.condoeconomy.api.presentation.dto.perfil.AdicionarPetRequestDTO;
 import com.condoeconomy.api.presentation.dto.perfil.AdicionarVeiculoRequestDTO;
@@ -23,12 +24,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -100,13 +104,16 @@ public class PerfilController {
                     auditService.registrarUsuario(usuario, "SENHA_ALTERADA", "INFO", ip,
                             "Senha alterada com Step-Up Auth e sessões anteriores revogadas (tokenVersion=" + usuario.getTokenVersion() + ").");
 
-                    // 6. Emissão de novo token para manter a sessão do dispositivo atual
+                    // 6. Emissão de novo token e atualização do Cookie HttpOnly para manter a sessão do dispositivo atual
                     String novoToken = tokenService.generateToken(usuario);
+                    ResponseCookie sessionCookie = AuthController.criarCookieSessao(novoToken, request.isSecure(), Duration.ofHours(2));
 
-                    return ResponseEntity.ok(Map.of(
-                            "message", "Senha alterada com sucesso! Todas as outras sessões foram desconectadas por segurança.",
-                            "token", novoToken
-                    ));
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.SET_COOKIE, sessionCookie.toString())
+                            .body(Map.of(
+                                    "message", "Senha alterada com sucesso! Todas as outras sessões foram desconectadas por segurança.",
+                                    "token", novoToken
+                            ));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -125,13 +132,16 @@ public class PerfilController {
                     auditService.registrarUsuario(usuario, "SESSOES_REVOGADAS_KILL_SWITCH", "ALERTA", ip,
                             "Kill Switch acionado pelo titular: todas as outras sessões foram desconectadas (tokenVersion=" + usuario.getTokenVersion() + ").");
 
-                    // Emite um novo token válido exclusivamente para a sessão ativa
+                    // Emite um novo token válido exclusivamente para a sessão ativa e atualiza o Cookie HttpOnly
                     String novoToken = tokenService.generateToken(usuario);
+                    ResponseCookie sessionCookie = AuthController.criarCookieSessao(novoToken, request.isSecure(), Duration.ofHours(2));
 
-                    return ResponseEntity.ok(Map.of(
-                            "message", "Todas as outras sessões foram encerradas com sucesso.",
-                            "token", novoToken
-                    ));
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.SET_COOKIE, sessionCookie.toString())
+                            .body(Map.of(
+                                    "message", "Todas as outras sessões foram encerradas com sucesso.",
+                                    "token", novoToken
+                            ));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }

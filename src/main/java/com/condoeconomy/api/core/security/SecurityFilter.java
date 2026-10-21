@@ -2,8 +2,10 @@ package com.condoeconomy.api.core.security;
 
 import com.condoeconomy.api.core.tenant.TenantContext;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataUsuarioRepository;
+import com.condoeconomy.api.presentation.controller.AuthController;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -95,8 +97,23 @@ public class SecurityFilter extends OncePerRequestFilter {
 
     private String recoverToken(HttpServletRequest request) {
         var authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
-        var token = authHeader.substring(7).trim();
-        return token.isEmpty() ? null : token;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            var token = authHeader.substring(7).trim();
+            if (!token.isEmpty()) {
+                return token;
+            }
+        }
+        // Fallback seguro: lê o token a partir do Cookie HttpOnly (HABITOS_SESSION)
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (AuthController.SESSION_COOKIE_NAME.equals(cookie.getName())
+                        && cookie.getValue() != null
+                        && !cookie.getValue().isBlank()) {
+                    return cookie.getValue().trim();
+                }
+            }
+        }
+        return null;
     }
 }

@@ -12,7 +12,9 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -22,12 +24,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
+    public static final String SESSION_COOKIE_NAME = "HABITOS_SESSION";
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final AuthenticationManager authenticationManager;
@@ -59,6 +63,16 @@ public class AuthController {
             String senha) {}
 
     public record LoginResponseDTO(String token, String papel, String nome) {}
+
+    public static ResponseCookie criarCookieSessao(String token, boolean secure, Duration maxAge) {
+        return ResponseCookie.from(SESSION_COOKIE_NAME, token != null ? token : "")
+                .httpOnly(true)
+                .secure(secure)
+                .path("/")
+                .maxAge(maxAge)
+                .sameSite("Lax")
+                .build();
+    }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody @Valid LoginRequestDTO data, HttpServletRequest request) {
@@ -92,7 +106,11 @@ public class AuthController {
             auditService.registrarUsuario(usuario, "LOGIN_SUCESSO", "INFO", ip,
                     "Autenticação realizada com sucesso (tokenVersion=" + usuario.getTokenVersion() + ").");
 
-            return ResponseEntity.ok(new LoginResponseDTO(token, usuario.getPapel(), usuario.getNome()));
+            ResponseCookie cookie = criarCookieSessao(token, request.isSecure(), Duration.ofHours(2));
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .body(new LoginResponseDTO(token, usuario.getPapel(), usuario.getNome()));
         } catch (AuthenticationException e) {
             loginAttemptService.registrarFalha(data.email(), ip);
             auditService.registrar(null, data.email(), "N/A", "LOGIN_FALHA", "ALERTA", ip,
@@ -101,5 +119,13 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "E-mail ou senha inválidos."));
         }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout(HttpServletRequest request) {
+        ResponseCookie clearCookie = criarCookieSessao("", request.isSecure(), Duration.ZERO);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
+                .body(Map.of("message", "Sessão encerrada e cookie HttpOnly removido com sucesso."));
     }
 }
