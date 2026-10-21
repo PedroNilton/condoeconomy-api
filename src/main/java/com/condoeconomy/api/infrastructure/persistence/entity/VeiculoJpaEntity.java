@@ -1,11 +1,18 @@
 package com.condoeconomy.api.infrastructure.persistence.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "veiculo")
+@SQLDelete(sql = "UPDATE veiculo SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,4 +28,8 @@ public class VeiculoJpaEntity {
     private String placa;
     private String modelo;
     private String cor;
+
+    @JsonIgnore
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 }

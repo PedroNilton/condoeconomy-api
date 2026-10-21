@@ -222,10 +222,13 @@ public class PerfilController {
     }
 
     @DeleteMapping("/veiculos/{id}")
-    public ResponseEntity<Void> deleteVeiculo(Authentication auth, @PathVariable UUID id) {
-        return veiculoRepository.findByIdAndUsuarioId(id, getLoggedUserId(auth))
+    public ResponseEntity<Void> deleteVeiculo(Authentication auth, @PathVariable UUID id, HttpServletRequest request) {
+        UsuarioJpaEntity user = (UsuarioJpaEntity) auth.getPrincipal();
+        return veiculoRepository.findByIdAndUsuarioId(id, user.getId())
                 .map(veiculo -> {
                     veiculoRepository.delete(veiculo);
+                    auditService.registrarUsuario(user, "EXCLUSAO_LOGICA_VEICULO", "INFO", request.getRemoteAddr(),
+                            "Veículo placa '" + veiculo.getPlaca() + "' arquivado via Soft Delete (LGPD).");
                     return ResponseEntity.noContent().<Void>build();
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -252,10 +255,13 @@ public class PerfilController {
     }
 
     @DeleteMapping("/pets/{id}")
-    public ResponseEntity<Void> deletePet(Authentication auth, @PathVariable UUID id) {
-        return petRepository.findByIdAndUsuarioId(id, getLoggedUserId(auth))
+    public ResponseEntity<Void> deletePet(Authentication auth, @PathVariable UUID id, HttpServletRequest request) {
+        UsuarioJpaEntity user = (UsuarioJpaEntity) auth.getPrincipal();
+        return petRepository.findByIdAndUsuarioId(id, user.getId())
                 .map(pet -> {
                     petRepository.delete(pet);
+                    auditService.registrarUsuario(user, "EXCLUSAO_LOGICA_PET", "INFO", request.getRemoteAddr(),
+                            "Pet '" + pet.getNome() + "' arquivado via Soft Delete (LGPD).");
                     return ResponseEntity.noContent().<Void>build();
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -280,10 +286,13 @@ public class PerfilController {
     }
 
     @DeleteMapping("/moradores/{id}")
-    public ResponseEntity<Void> deleteMorador(Authentication auth, @PathVariable UUID id) {
-        return moradorAdicionalRepository.findByIdAndUsuarioId(id, getLoggedUserId(auth))
+    public ResponseEntity<Void> deleteMorador(Authentication auth, @PathVariable UUID id, HttpServletRequest request) {
+        UsuarioJpaEntity user = (UsuarioJpaEntity) auth.getPrincipal();
+        return moradorAdicionalRepository.findByIdAndUsuarioId(id, user.getId())
                 .map(morador -> {
                     moradorAdicionalRepository.delete(morador);
+                    auditService.registrarUsuario(user, "EXCLUSAO_LOGICA_MORADOR_ADICIONAL", "INFO", request.getRemoteAddr(),
+                            "Morador dependente '" + morador.getNome() + "' arquivado via Soft Delete (LGPD).");
                     return ResponseEntity.noContent().<Void>build();
                 })
                 .orElse(ResponseEntity.notFound().build());
