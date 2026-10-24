@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: condoeconomy-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-condoadmin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-condopassword}
+      POSTGRES_DB: ${DB_NAME:-condoeconomy_db}
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-condoadmin} -d ${DB_NAME:-condoeconomy_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - condonet
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: condoeconomy-api-prod
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-condoeconomy_db}
+      DB_USERNAME: ${DB_USERNAME:-condoadmin}
+      DB_PASSWORD: ${DB_PASSWORD:-condopassword}
+      JWT_SECRET: ${JWT_SECRET:-chave-secreta-de-producao-com-mais-de-32-caracteres-256bits}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,https://app.condoeconomy.com}
+    ports:
+      - "8080:8080"
+    networks:
+      - condonet
+
+  frontend:
+    build:
+      context: ../condoeconomy-web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+    container_name: condoeconomy-web-prod
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - condonet
+
+volumes:
+  pgdata_prod:
+
+networks:
+  condonet:
+    driver: bridge
