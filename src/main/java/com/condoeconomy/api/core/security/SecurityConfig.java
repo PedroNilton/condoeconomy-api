@@ -37,6 +37,9 @@ public class SecurityConfig {
 
     private final SecurityFilter securityFilter;
 
+    @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000,https://app.condoeconomy.com}")
+    private String allowedOrigins;
+
     public SecurityConfig(SecurityFilter securityFilter) {
         this.securityFilter = securityFilter;
     }
@@ -124,7 +127,11 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "https://app.condoeconomy.com"));
+        java.util.List<String> origins = Arrays.stream((allowedOrigins != null ? allowedOrigins : "").split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Tenant-ID", "X-Step-Up-Password"));
         configuration.setAllowCredentials(true);
