@@ -64,12 +64,13 @@ public class SecurityConfig {
                         // --- Públicos ---
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/logout").permitAll()
                         .requestMatchers("/error").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         // Webhook é público na camada HTTP, mas o controller valida o token secreto do gateway.
                         .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
 
-                        // --- Rotas de diagnóstico: nunca públicas ---
-                        .requestMatchers("/api/v1/testes/**").hasRole("SUPER_ADMIN")
+                        // --- Rotas de diagnóstico e métricas avançadas: nunca públicas ---
+                        .requestMatchers("/actuator/**", "/api/v1/testes/**").hasRole("SUPER_ADMIN")
 
                         // --- Condomínio / CondoStore ---
                         .requestMatchers(HttpMethod.POST, "/api/v1/condominios").hasRole("SUPER_ADMIN")
