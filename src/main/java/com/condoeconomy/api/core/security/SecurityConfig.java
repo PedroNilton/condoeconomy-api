@@ -56,7 +56,7 @@ public class SecurityConfig {
                         .referrerPolicy(referrer -> referrer
                                 .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                         .contentSecurityPolicy(csp -> csp
-                                .policyDirectives("default-src 'self'; frame-ancestors 'none'; form-action 'self'"))
+                                .policyDirectives("default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; form-action 'self'"))
                         .permissionsPolicy(permissions -> permissions
                                 .policy("geolocation=(), microphone=(), camera=()"))
                 )
@@ -65,6 +65,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/logout").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         // Webhook é público na camada HTTP, mas o controller valida o token secreto do gateway.
                         .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
