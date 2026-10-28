@@ -52,5 +52,8 @@ mvn spring-boot:run
 
 O servidor iniciará localmente na porta padrão **8080**.
 
+- **Documentação Interativa (Swagger UI):** `http://localhost:8080/swagger-ui/index.html`
+- **Diagnóstico de Saúde (Spring Actuator):** `http://localhost:8080/actuator/health`
+
 ---
 *Back-end otimizado para escalabilidade, segurança e alta performance.*
