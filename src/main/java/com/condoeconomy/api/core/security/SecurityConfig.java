@@ -109,10 +109,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/v1/chamados/*/escalar").hasRole("PORTEIRO")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/chamados/*/status").hasAnyRole(STAFF)
 
-                        // --- Financeiro & Auditoria ---
+                        // --- Financeiro & Administração (Auditoria / Gestão de Usuários) ---
                         .requestMatchers(HttpMethod.PUT, "/api/v1/boletos/*/baixar").hasAnyRole(GESTAO)
                         .requestMatchers("/api/v1/financas/**").hasAnyRole(GESTAO)
-                        .requestMatchers("/api/v1/admin/auditoria/**").hasAnyRole(GESTAO)
+                        .requestMatchers("/api/v1/admin/**").hasAnyRole(GESTAO)
 
                         .anyRequest().authenticated()
                 )

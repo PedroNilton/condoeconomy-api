@@ -1,5 +1,6 @@
 package com.condoeconomy.api.infrastructure.persistence.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -7,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.envers.Audited;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -14,8 +16,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
-
-import org.hibernate.envers.Audited;
 
 @Entity
 @Table(name = "usuario")
@@ -32,12 +32,17 @@ public class UsuarioJpaEntity implements UserDetails {
     private String nome;
     private String email;
     private String senha;
-    private String papel; // ex: ROLE_PORTEIRO
+    private String papel; // ex: ROLE_PORTEIRO, ROLE_MORADOR, ROLE_SINDICO
     private String telefone;
     private String apartamento;
     private String bloco;
     private String foto;
+
+    @Column(name = "token_version", nullable = false)
     private int tokenVersion = 1;
+
+    @Column(name = "ativo", nullable = false)
+    private boolean ativo = true;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -56,10 +61,13 @@ public class UsuarioJpaEntity implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() { return true; }
+
     @Override
-    public boolean isAccountNonLocked() { return true; }
+    public boolean isAccountNonLocked() { return this.ativo; }
+
     @Override
     public boolean isCredentialsNonExpired() { return true; }
+
     @Override
-    public boolean isEnabled() { return true; }
+    public boolean isEnabled() { return this.ativo; }
 }

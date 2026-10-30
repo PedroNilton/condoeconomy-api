@@ -4,6 +4,7 @@ import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -11,4 +12,6 @@ import java.util.UUID;
 public interface SpringDataUsuarioRepository extends JpaRepository<UsuarioJpaEntity, UUID> {
     Optional<UsuarioJpaEntity> findByEmail(String email);
     Optional<UsuarioJpaEntity> findByEmailIgnoreCase(String email);
+    boolean existsByEmailIgnoreCase(String email);
+    List<UsuarioJpaEntity> findAllByOrderByNomeAsc();
 }

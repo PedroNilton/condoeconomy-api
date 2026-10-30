@@ -70,9 +70,11 @@ public class SecurityFilter extends OncePerRequestFilter {
                             TenantContext.setCurrentTenant(tokenTenant);
                         }
 
-                        // Barreira 5 (Token Kill Switch / Revogação Imediata):
-                        // Se o tokenVersion for nulo (token legado pré-migração) ou igual à versão atual, autentica.
-                        // Caso a senha tenha sido alterada ou sessões encerradas, a versão diverge e o acesso é cortado na hora.
+                        // Barreira 5 (Token Kill Switch & Bloqueio Imediato de Conta Desativada):
+                        if (!usuario.isEnabled()) {
+                            log.warn("[AUDITORIA DE SEGURANÇA] Tentativa de uso de token por conta desativada: '{}'", email);
+                            return;
+                        }
                         if (tokenVersion == null || tokenVersion == usuario.getTokenVersion()) {
                             var authentication = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
                             SecurityContextHolder.getContext().setAuthentication(authentication);
