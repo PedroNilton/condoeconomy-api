@@ -79,6 +79,8 @@ public class SecurityConfig {
 
                         // --- Condomínio / CondoStore ---
                         .requestMatchers(HttpMethod.POST, "/api/v1/condominios").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/condostore/produtos").hasAnyRole(STAFF_OU_MORADOR)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/condostore/pedidos/meus").hasRole("MORADOR")
                         .requestMatchers(HttpMethod.POST, "/api/v1/condostore/pedidos", "/api/v1/store/pedidos").hasRole("MORADOR")
 
                         // --- Visitantes (POST público para Auto Check-in via QR Code na portaria) ---
