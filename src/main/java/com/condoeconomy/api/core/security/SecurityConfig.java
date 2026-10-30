@@ -62,7 +62,11 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(authorize -> authorize
                         // --- Públicos ---
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/logout").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/logout",
+                                "/api/v1/auth/recuperar-senha",
+                                "/api/v1/auth/redefinir-senha").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()

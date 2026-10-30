@@ -1,6 +1,7 @@
 package com.condoeconomy.api.presentation.controller;
 
 import com.condoeconomy.api.core.security.LoginAttemptService;
+import com.condoeconomy.api.core.security.PasswordRecoveryService;
 import com.condoeconomy.api.core.security.SecurityAuditService;
 import com.condoeconomy.api.core.security.SecuritySanitizer;
 import com.condoeconomy.api.core.security.TokenService;
@@ -38,15 +39,18 @@ public class AuthController {
     private final TokenService tokenService;
     private final LoginAttemptService loginAttemptService;
     private final SecurityAuditService auditService;
+    private final PasswordRecoveryService passwordRecoveryService;
 
     public AuthController(AuthenticationManager authenticationManager,
                           TokenService tokenService,
                           LoginAttemptService loginAttemptService,
-                          SecurityAuditService auditService) {
+                          SecurityAuditService auditService,
+                          PasswordRecoveryService passwordRecoveryService) {
         this.authenticationManager = authenticationManager;
         this.tokenService = tokenService;
         this.loginAttemptService = loginAttemptService;
         this.auditService = auditService;
+        this.passwordRecoveryService = passwordRecoveryService;
     }
 
     public record LoginRequestDTO(
@@ -61,6 +65,32 @@ public class AuthController {
             @NotBlank(message = "A senha é obrigatória")
             @Size(min = 6, max = 128, message = "A senha deve ter entre 6 e 128 caracteres")
             String senha) {}
+
+    public record RecuperarSenhaRequestDTO(
+            @NotBlank(message = "O e-mail é obrigatório")
+            @Size(max = 255, message = "E-mail não pode ultrapassar 255 caracteres")
+            @Pattern(
+                regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
+                message = "Formato de e-mail inválido"
+            )
+            String email) {}
+
+    public record RedefinirSenhaRequestDTO(
+            @NotBlank(message = "O e-mail é obrigatório")
+            @Size(max = 255, message = "E-mail não pode ultrapassar 255 caracteres")
+            @Pattern(
+                regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
+                message = "Formato de e-mail inválido"
+            )
+            String email,
+
+            @NotBlank(message = "O código de verificação é obrigatório")
+            @Pattern(regexp = "^\\d{6}$", message = "O código deve conter 6 dígitos numéricos")
+            String codigo,
+
+            @NotBlank(message = "A nova senha é obrigatória")
+            @Size(min = 8, max = 128, message = "A nova senha deve ter entre 8 e 128 caracteres")
+            String novaSenha) {}
 
     public record LoginResponseDTO(String token, String papel, String nome) {}
 
@@ -118,6 +148,55 @@ public class AuthController {
             // Mensagem genérica: não revela se o e-mail existe ou se a senha está errada
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "E-mail ou senha inválidos."));
+        }
+    }
+
+    @PostMapping("/recuperar-senha")
+    public ResponseEntity<Map<String, String>> recuperarSenha(@RequestBody @Valid RecuperarSenhaRequestDTO data,
+                                                              HttpServletRequest request) {
+        String ip = request.getRemoteAddr();
+        if (!loginAttemptService.verificarEContabilizarRequisicaoPublica(ip, "recuperar-senha", 5)) {
+            auditService.registrar(null, data.email(), "N/A", "FLOOD_RECUPERACAO_SENHA", "ALERTA", ip,
+                    "Limite de solicitações de recuperação de senha excedido pelo IP.");
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("message", "Muitas solicitações recentes. Aguarde alguns minutos antes de tentar novamente."));
+        }
+
+        if (SecuritySanitizer.contemPadroesMaliciosos(data.email())) {
+            auditService.registrar(null, data.email(), "N/A", "INJECAO_RECUPERACAO_SENHA", "CRITICO", ip,
+                    "Payload suspeito interceptado em /recuperar-senha.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Endereço de e-mail inválido."));
+        }
+
+        passwordRecoveryService.solicitarRecuperacao(data.email(), ip);
+
+        // Resposta uniforme para impedir enumeração de e-mails cadastrados
+        return ResponseEntity.ok(Map.of(
+                "message", "Se o e-mail estiver vinculado a uma conta ativa, um código de verificação de 6 dígitos foi enviado."
+        ));
+    }
+
+    @PostMapping("/redefinir-senha")
+    public ResponseEntity<Map<String, String>> redefinirSenha(@RequestBody @Valid RedefinirSenhaRequestDTO data,
+                                                              HttpServletRequest request) {
+        String ip = request.getRemoteAddr();
+        if (!loginAttemptService.verificarEContabilizarRequisicaoPublica(ip, "redefinir-senha", 8)) {
+            auditService.registrar(null, data.email(), "N/A", "FLOOD_REDEFINICAO_SENHA", "ALERTA", ip,
+                    "Limite de tentativas de redefinição de senha excedido pelo IP.");
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("message", "Muitas tentativas de verificação. Aguarde alguns minutos."));
+        }
+
+        try {
+            passwordRecoveryService.redefinirSenha(data.email(), data.codigo(), data.novaSenha(), ip);
+            ResponseCookie clearCookie = criarCookieSessao("", request.isSecure(), Duration.ZERO);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
+                    .body(Map.of("message", "Senha redefinida com sucesso! Você já pode entrar com sua nova senha."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
         }
     }
 
