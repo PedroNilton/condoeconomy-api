@@ -11,4 +11,7 @@ import java.util.UUID;
 public interface SpringDataAuditoriaSegurancaRepository extends JpaRepository<AuditoriaSegurancaJpaEntity, UUID> {
     List<AuditoriaSegurancaJpaEntity> findTop15ByUsuarioIdOrderByCriadoEmDesc(UUID usuarioId);
     List<AuditoriaSegurancaJpaEntity> findTop50ByOrderByCriadoEmDesc();
+    List<AuditoriaSegurancaJpaEntity> findTop100ByOrderByCriadoEmDesc();
+    List<AuditoriaSegurancaJpaEntity> findTop100BySeveridadeIgnoreCaseOrderByCriadoEmDesc(String severidade);
+    long countBySeveridadeIgnoreCase(String severidade);
 }

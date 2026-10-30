@@ -8,7 +8,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -59,5 +61,24 @@ public class SecurityAuditService {
 
     public List<AuditoriaSegurancaJpaEntity> listarRecentesCondominio() {
         return repository.findTop50ByOrderByCriadoEmDesc();
+    }
+
+    public List<AuditoriaSegurancaJpaEntity> listarParaPainelAdmin(String severidade) {
+        if (severidade != null && !severidade.isBlank()) {
+            return repository.findTop100BySeveridadeIgnoreCaseOrderByCriadoEmDesc(severidade.trim());
+        }
+        return repository.findTop100ByOrderByCriadoEmDesc();
+    }
+
+    public Map<String, Long> obterResumoSeveridade() {
+        long criticos = repository.countBySeveridadeIgnoreCase("CRITICO");
+        long alertas = repository.countBySeveridadeIgnoreCase("ALERTA");
+        long infos = repository.countBySeveridadeIgnoreCase("INFO");
+        Map<String, Long> resumo = new LinkedHashMap<>();
+        resumo.put("total", criticos + alertas + infos);
+        resumo.put("criticos", criticos);
+        resumo.put("alertas", alertas);
+        resumo.put("infos", infos);
+        return resumo;
     }
 }
