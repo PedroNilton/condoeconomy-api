@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 @Repository
 interface SpringDataPedidoRepository extends JpaRepository<PedidoJpaEntity, UUID> {
     List<PedidoJpaEntity> findByMoradorIdOrderByDataCriacaoDesc(UUID moradorId);
+    List<PedidoJpaEntity> findTop50ByOrderByDataCriacaoDesc();
 }
 
 @Component
@@ -49,6 +50,14 @@ public class PedidoRepositoryImpl implements PedidoRepository {
     @Transactional(readOnly = true)
     public List<PedidoResponseDTO> listarPorMorador(UUID moradorId) {
         return repository.findByMoradorIdOrderByDataCriacaoDesc(moradorId).stream()
+                .map(PedidoResponseDTO::fromJpaEntity)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PedidoResponseDTO> listarRecentes() {
+        return repository.findTop50ByOrderByDataCriacaoDesc().stream()
                 .map(PedidoResponseDTO::fromJpaEntity)
                 .toList();
     }

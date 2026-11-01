@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface PedidoRepository {
     Pedido salvar(Pedido pedido);
     List<PedidoResponseDTO> listarPorMorador(UUID moradorId);
+    List<PedidoResponseDTO> listarRecentes();
 }
