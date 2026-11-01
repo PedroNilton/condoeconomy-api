@@ -1,8 +1,8 @@
 package com.condoeconomy.api.application.usecase.visitante;
 
+import com.condoeconomy.api.application.service.NotificationService;
 import com.condoeconomy.api.domain.entity.visitante.Visitante;
 import com.condoeconomy.api.infrastructure.repository.visitante.VisitanteRepository;
-import com.condoeconomy.api.application.service.NotificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,17 +21,28 @@ public class CriarVisitanteUseCase {
 
     @Transactional
     public Visitante executar(String nome, String sobrenome, String blocoDestino, String unidadeDestino, String placaVeiculo) {
-        // Auto-Checkin flow fields
+        return executar(nome, sobrenome, blocoDestino, unidadeDestino, placaVeiculo, LocalDate.now(), "VISITANTE", "A CONFIRMAR");
+    }
+
+    @Transactional
+    public Visitante executar(String nome,
+                              String sobrenome,
+                              String blocoDestino,
+                              String unidadeDestino,
+                              String placaVeiculo,
+                              LocalDate dataVisita,
+                              String tipo,
+                              String moradorResponsavel) {
         Visitante visitante = new Visitante(
-                nome, 
-                sobrenome, 
-                "NÃO INFORMADO", // documento
-                LocalDate.now(), 
-                blocoDestino, 
-                unidadeDestino, 
-                "A CONFIRMAR", // morador_responsavel
-                placaVeiculo, 
-                "VISITANTE"
+                nome,
+                sobrenome,
+                "NÃO INFORMADO",
+                dataVisita != null ? dataVisita : LocalDate.now(),
+                blocoDestino,
+                unidadeDestino,
+                moradorResponsavel != null && !moradorResponsavel.isBlank() ? moradorResponsavel : "A CONFIRMAR",
+                placaVeiculo,
+                tipo != null && !tipo.isBlank() ? tipo.toUpperCase() : "VISITANTE"
         );
         Visitante salvo = repository.save(visitante);
         notificationService.notifyVisitantesUpdate();

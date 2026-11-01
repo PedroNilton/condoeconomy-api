@@ -3,6 +3,8 @@ package com.condoeconomy.api.presentation.dto.visitante;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import java.time.LocalDate;
+
 public record CriarVisitanteRequestDTO(
         @NotBlank(message = "O nome é obrigatório")
         @Size(min = 2, max = 100, message = "O nome deve ter entre 2 e 100 caracteres")
@@ -21,6 +23,11 @@ public record CriarVisitanteRequestDTO(
         String unidadeDestino,
 
         @Size(max = 10, message = "A placa deve ter no máximo 10 caracteres")
-        String placaVeiculo
+        String placaVeiculo,
+
+        LocalDate dataVisita,
+
+        @Size(max = 30, message = "O tipo deve ter no máximo 30 caracteres")
+        String tipo
 ) {
 }

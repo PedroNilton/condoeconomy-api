@@ -99,17 +99,24 @@ public class VisitanteController {
         if (request.placaVeiculo() != null && !request.placaVeiculo().isBlank()) {
             SecuritySanitizer.validarTextoSeguro(request.placaVeiculo(), "placaVeiculo");
         }
+        if (request.tipo() != null && !request.tipo().isBlank()) {
+            SecuritySanitizer.validarTextoSeguro(request.tipo(), "tipo");
+        }
 
         String bloco = SecuritySanitizer.sanitizar(request.blocoDestino());
         String unidade = SecuritySanitizer.sanitizar(request.unidadeDestino());
+        String moradorResponsavel = "A CONFIRMAR";
 
-        // Se for morador autenticado, vincula obrigatoriamente ao seu bloco/apartamento
+        // Se for morador autenticado, vincula obrigatoriamente ao seu bloco/apartamento e nome
         if (auth != null && auth.getPrincipal() instanceof UsuarioJpaEntity user && "ROLE_MORADOR".equals(user.getPapel())) {
             if (user.getBloco() != null && !user.getBloco().isBlank()) {
                 bloco = user.getBloco();
             }
             if (user.getApartamento() != null && !user.getApartamento().isBlank()) {
                 unidade = user.getApartamento();
+            }
+            if (user.getNome() != null && !user.getNome().isBlank()) {
+                moradorResponsavel = user.getNome();
             }
         }
 
@@ -118,7 +125,10 @@ public class VisitanteController {
                 SecuritySanitizer.sanitizar(request.sobrenome()),
                 bloco,
                 unidade,
-                request.placaVeiculo() != null ? SecuritySanitizer.sanitizar(request.placaVeiculo()) : null
+                request.placaVeiculo() != null ? SecuritySanitizer.sanitizar(request.placaVeiculo()) : null,
+                request.dataVisita(),
+                request.tipo() != null ? SecuritySanitizer.sanitizar(request.tipo()) : "VISITANTE",
+                moradorResponsavel
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(VisitanteResponseDTO.fromEntity(visitante));
     }

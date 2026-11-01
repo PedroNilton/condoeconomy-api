@@ -40,7 +40,7 @@ public class BoletoController {
         this.auditService = auditService;
     }
 
-    @GetMapping
+    @GetMapping({"", "/meus"})
     public ResponseEntity<List<BoletoResponseDTO>> listarBoletos(
             Authentication auth,
             @RequestParam(required = false) String unidade,
@@ -62,7 +62,12 @@ public class BoletoController {
                 auditService.registrarUsuario(user, "TENTATIVA_IDOR_BOLETO", "ALERTA", request.getRemoteAddr(),
                         "Tentativa bloqueada de consultar boletos da unidade: " + unidadeConsulta);
             }
-            unidadeConsulta = unidadeMorador;
+            var boletos = listarBoletosUseCase.executar(unidadeMorador);
+            if (boletos.isEmpty() && user.getApartamento() != null && !user.getApartamento().isBlank()) {
+                boletos = listarBoletosUseCase.executar("Apto " + user.getApartamento());
+            }
+            var dtos = boletos.stream().map(BoletoResponseDTO::fromEntity).collect(Collectors.toList());
+            return ResponseEntity.ok(dtos);
         }
 
         var boletos = listarBoletosUseCase.executar(unidadeConsulta);

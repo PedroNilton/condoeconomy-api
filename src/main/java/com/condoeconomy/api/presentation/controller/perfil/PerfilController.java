@@ -6,10 +6,12 @@ import com.condoeconomy.api.core.security.TokenService;
 import com.condoeconomy.api.infrastructure.persistence.entity.AuditoriaSegurancaJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.entity.MoradorAdicionalJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.entity.PetJpaEntity;
+import com.condoeconomy.api.infrastructure.persistence.entity.PreferenciaNotificacaoJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.entity.VeiculoJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataMoradorAdicionalRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataPetRepository;
+import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataPreferenciaNotificacaoRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataUsuarioRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataVeiculoRepository;
 import com.condoeconomy.api.presentation.controller.AuthController;
@@ -49,6 +51,7 @@ public class PerfilController {
     private final SpringDataVeiculoRepository veiculoRepository;
     private final SpringDataPetRepository petRepository;
     private final SpringDataMoradorAdicionalRepository moradorAdicionalRepository;
+    private final SpringDataPreferenciaNotificacaoRepository preferenciaNotificacaoRepository;
     private final SpringDataUsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
@@ -163,6 +166,8 @@ public class PerfilController {
                     relatorio.put("veiculosCadastrados", veiculoRepository.findByUsuarioId(userId));
                     relatorio.put("petsCadastrados", petRepository.findByUsuarioId(userId));
                     relatorio.put("moradoresDependentes", moradorAdicionalRepository.findByUsuarioId(userId));
+                    relatorio.put("preferenciasNotificacao", preferenciaNotificacaoRepository.findById(userId)
+                            .orElseGet(() -> PreferenciaNotificacaoJpaEntity.padrao(userId)));
                     relatorio.put("trilhaAuditoriaSeguranca", auditService.listarPorUsuario(userId));
 
                     return ResponseEntity.ok(relatorio);
@@ -296,5 +301,59 @@ public class PerfilController {
                     return ResponseEntity.noContent().<Void>build();
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    // --- PREFERÊNCIAS DE NOTIFICAÇÕES ---
+    public record PreferenciasNotificacaoDTO(
+            boolean encomendas_push,
+            boolean boletos_push,
+            boolean boletos_email,
+            boolean reservas_push,
+            boolean comunicados_push,
+            boolean comunicados_email,
+            boolean resumo_email
+    ) {
+        public static PreferenciasNotificacaoDTO fromEntity(PreferenciaNotificacaoJpaEntity e) {
+            return new PreferenciasNotificacaoDTO(
+                    e.isEncomendasPush(),
+                    e.isBoletosPush(),
+                    e.isBoletosEmail(),
+                    e.isReservasPush(),
+                    e.isComunicadosPush(),
+                    e.isComunicadosEmail(),
+                    e.isResumoEmail()
+            );
+        }
+    }
+
+    @GetMapping("/notificacoes")
+    public ResponseEntity<PreferenciasNotificacaoDTO> getPreferenciasNotificacao(Authentication auth) {
+        UUID userId = getLoggedUserId(auth);
+        PreferenciaNotificacaoJpaEntity prefs = preferenciaNotificacaoRepository.findById(userId)
+                .orElseGet(() -> PreferenciaNotificacaoJpaEntity.padrao(userId));
+        return ResponseEntity.ok(PreferenciasNotificacaoDTO.fromEntity(prefs));
+    }
+
+    @PutMapping("/notificacoes")
+    public ResponseEntity<PreferenciasNotificacaoDTO> salvarPreferenciasNotificacao(
+            Authentication auth,
+            @RequestBody PreferenciasNotificacaoDTO dto,
+            HttpServletRequest request) {
+        UsuarioJpaEntity user = (UsuarioJpaEntity) auth.getPrincipal();
+        PreferenciaNotificacaoJpaEntity entidade = new PreferenciaNotificacaoJpaEntity(
+                user.getId(),
+                dto.encomendas_push(),
+                dto.boletos_push(),
+                dto.boletos_email(),
+                dto.reservas_push(),
+                dto.comunicados_push(),
+                dto.comunicados_email(),
+                dto.resumo_email(),
+                LocalDateTime.now()
+        );
+        PreferenciaNotificacaoJpaEntity salva = preferenciaNotificacaoRepository.save(entidade);
+        auditService.registrarUsuario(user, "PREFERENCIAS_NOTIFICACAO_ATUALIZADAS", "INFO", request.getRemoteAddr(),
+                "Preferências de canais de notificação (Push/E-mail) salvas pelo titular.");
+        return ResponseEntity.ok(PreferenciasNotificacaoDTO.fromEntity(salva));
     }
 }
