@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.GeneralSecurityException;
 import java.security.Security;
@@ -22,6 +24,8 @@ import java.util.UUID;
 @Primary
 @RequiredArgsConstructor
 public class WebPushNotificationServiceImpl implements PushNotificationService {
+
+    private static final Logger log = LoggerFactory.getLogger(WebPushNotificationServiceImpl.class);
 
     @Value("${vapid.public.key}")
     private String publicKey;
@@ -59,15 +63,15 @@ public class WebPushNotificationServiceImpl implements PushNotificationService {
                     Notification notification = new Notification(subscription, payload);
                     pushService.send(notification);
                 } catch (Exception e) {
-                    System.err.println("Erro ao enviar para endpoint " + sub.getEndpoint() + ": " + e.getMessage());
+                    log.warn("[WEB PUSH] Erro ao enviar para endpoint {}: {}", sub.getEndpoint(), e.getMessage());
                     // If gone, we should delete the subscription
-                    if (e.getMessage().contains("410") || e.getMessage().contains("404")) {
+                    if (e.getMessage() != null && (e.getMessage().contains("410") || e.getMessage().contains("404"))) {
                         subscriptionRepository.deleteByEndpoint(sub.getEndpoint());
                     }
                 }
             }
         } catch (IllegalArgumentException e) {
-            System.err.println("tokenDispositivo deve ser o usuarioId para WebPush");
+            log.debug("[WEB PUSH] tokenDispositivo '{}' não é um UUID de usuário para WebPush.", tokenDispositivo);
         }
     }
 }
