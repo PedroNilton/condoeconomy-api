@@ -32,6 +32,12 @@ public class VotacaoController {
         return ResponseEntity.ok(votacaoService.listarAtivas(authentication.getName()));
     }
 
+    // Morador / Geral: Listar encerradas (histórico de atas/resultados)
+    @GetMapping("/encerradas")
+    public ResponseEntity<List<VotacaoResponseDTO>> listarEncerradas(Authentication authentication) {
+        return ResponseEntity.ok(votacaoService.listarEncerradas(authentication.getName()));
+    }
+
     // Admin/Síndico: Listar todas
     @GetMapping
     @PreAuthorize("hasAnyRole('ROLE_SINDICO', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")

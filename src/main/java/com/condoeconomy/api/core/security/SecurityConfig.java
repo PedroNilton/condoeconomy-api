@@ -78,7 +78,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**", "/api/v1/testes/**").hasRole("SUPER_ADMIN")
 
                         // --- Condomínio / CondoStore ---
-                        .requestMatchers(HttpMethod.POST, "/api/v1/condominios").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/api/v1/condominios", "/api/v1/condominios/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/condostore/produtos").hasAnyRole(STAFF_OU_MORADOR)
                         .requestMatchers(HttpMethod.GET, "/api/v1/condostore/pedidos/meus").hasRole("MORADOR")
                         .requestMatchers(HttpMethod.POST, "/api/v1/condostore/pedidos", "/api/v1/store/pedidos").hasRole("MORADOR")
@@ -95,13 +95,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/v1/encomendas/*/retirar").hasAnyRole(STAFF)
 
                         // --- Avisos ---
-                        .requestMatchers(HttpMethod.POST, "/api/v1/avisos").hasRole("SINDICO")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/avisos").hasAnyRole(GESTAO)
 
                         // --- Reservas ---
                         .requestMatchers(HttpMethod.GET, "/api/v1/reservas/minhas", "/api/v1/reservas/areas-comuns").hasAnyRole(STAFF_OU_MORADOR)
                         .requestMatchers(HttpMethod.GET, "/api/v1/reservas").hasAnyRole(STAFF)
                         .requestMatchers(HttpMethod.POST, "/api/v1/reservas").hasRole("MORADOR")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/reservas/*/aprovar", "/api/v1/reservas/*/rejeitar").hasAnyRole("SINDICO", "PORTEIRO")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/reservas/*/aprovar", "/api/v1/reservas/*/rejeitar").hasAnyRole(STAFF)
                         .requestMatchers(HttpMethod.PUT, "/api/v1/reservas/*/convidados/*/checkin").hasAnyRole(STAFF)
 
                         // --- Chamados (Ouvidoria) ---

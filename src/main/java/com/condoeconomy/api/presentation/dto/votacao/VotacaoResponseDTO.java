@@ -18,4 +18,6 @@ public class VotacaoResponseDTO {
     private String autorNome;
     private List<OpcaoVotacaoDTO> opcoes;
     private boolean usuarioJaVotou;
+    private boolean usuarioAdimplente = true;
+    private String motivoInaptidao;
 }

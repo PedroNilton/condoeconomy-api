@@ -5,6 +5,7 @@ import com.condoeconomy.api.domain.entity.Condominio;
 import com.condoeconomy.api.infrastructure.persistence.entity.CondominioJpaEntity;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -38,6 +39,11 @@ public class CondominioRepositoryImpl implements CondominioRepository {
     @Override
     public boolean existePorTenantId(String tenantId) {
         return repository.existsByTenantId(tenantId);
+    }
+
+    @Override
+    public List<Condominio> listarTodos() {
+        return repository.findAll().stream().map(this::toDomain).toList();
     }
     
     private Condominio toDomain(CondominioJpaEntity entity) {

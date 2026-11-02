@@ -1,5 +1,6 @@
 package com.condoeconomy.api.presentation.controller;
 
+import com.condoeconomy.api.application.gateway.CondominioRepository;
 import com.condoeconomy.api.application.usecase.CadastrarCondominioUseCase;
 import com.condoeconomy.api.core.security.SecuritySanitizer;
 import com.condoeconomy.api.presentation.dto.CondominioRequestDTO;
@@ -13,6 +14,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/condominios")
 public class CondominioController {
@@ -20,9 +23,20 @@ public class CondominioController {
     private static final Logger log = LoggerFactory.getLogger(CondominioController.class);
 
     private final CadastrarCondominioUseCase useCase;
+    private final CondominioRepository repository;
 
-    public CondominioController(CadastrarCondominioUseCase useCase) {
+    public CondominioController(CadastrarCondominioUseCase useCase, CondominioRepository repository) {
         this.useCase = useCase;
+        this.repository = repository;
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('ROLE_SUPER_ADMIN')")
+    public ResponseEntity<List<CondominioResponseDTO>> listar() {
+        var condominios = repository.listarTodos().stream()
+                .map(CondominioResponseDTO::fromEntity)
+                .toList();
+        return ResponseEntity.ok(condominios);
     }
 
     @PostMapping

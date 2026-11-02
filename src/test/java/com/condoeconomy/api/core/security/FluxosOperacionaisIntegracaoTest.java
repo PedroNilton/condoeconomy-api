@@ -1,13 +1,21 @@
 package com.condoeconomy.api.core.security;
 
+import com.condoeconomy.api.application.gateway.CondominioRepository;
 import com.condoeconomy.api.application.gateway.PedidoRepository;
 import com.condoeconomy.api.application.gateway.ProdutoRepository;
+import com.condoeconomy.api.application.service.VotacaoService;
 import com.condoeconomy.api.application.service.notification.FirebasePushNotificationServiceImpl;
 import com.condoeconomy.api.application.service.payment.AsaasGatewayPagamentoServiceImpl;
+import com.condoeconomy.api.application.usecase.CadastrarCondominioUseCase;
+import com.condoeconomy.api.domain.entity.Condominio;
+import com.condoeconomy.api.domain.entity.OpcaoVotacao;
 import com.condoeconomy.api.domain.entity.Produto;
+import com.condoeconomy.api.domain.entity.Votacao;
+import com.condoeconomy.api.domain.enums.VotacaoStatus;
 import com.condoeconomy.api.infrastructure.persistence.entity.PreferenciaNotificacaoJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.entity.financeiro.BoletoJpaEntity;
+import com.condoeconomy.api.infrastructure.persistence.entity.financeiro.DespesaJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataMoradorAdicionalRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataPetRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataPreferenciaNotificacaoRepository;
@@ -15,9 +23,13 @@ import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataUsua
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataVeiculoRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.financeiro.SpringDataBoletoRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.financeiro.SpringDataDespesaRepository;
+import com.condoeconomy.api.infrastructure.repository.VotacaoRepository;
+import com.condoeconomy.api.infrastructure.repository.VotoRepository;
+import com.condoeconomy.api.presentation.controller.CondominioController;
 import com.condoeconomy.api.presentation.controller.FinancasController;
 import com.condoeconomy.api.presentation.controller.admin.AdminCondoStoreController;
 import com.condoeconomy.api.presentation.controller.perfil.PerfilController;
+import com.condoeconomy.api.presentation.dto.votacao.VotoRequestDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,7 +43,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -39,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -258,5 +273,121 @@ class FluxosOperacionaisIntegracaoTest {
             firebaseLocal.inicializarSeConfigurado();
             firebaseLocal.enviarPush("fcm_token_exemplo_1234567890", "Aviso da Portaria", "Sua visita chegou.");
         });
+    }
+
+    @Test
+    @DisplayName("Finanças Admin: lança despesa operacional, efetua baixa (pagamento) e lista despesas")
+    void deveCadastrarPagarEListarDespesasOperacionaisComAuditoria() {
+        UsuarioJpaEntity sindico = new UsuarioJpaEntity();
+        sindico.setId(UUID.randomUUID());
+        sindico.setEmail("sindico@condominio.com");
+
+        var despesaDto = new FinancasController.SalvarDespesaRequestDTO(
+                "Manutenção Preventiva de Elevadores",
+                new BigDecimal("1450.00"),
+                LocalDate.now().plusDays(15),
+                "PENDENTE"
+        );
+
+        when(despesaRepository.save(any(DespesaJpaEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var respCadastro = financasController.cadastrarDespesa(despesaDto, sindico, new MockHttpServletRequest());
+        assertEquals(HttpStatus.CREATED, respCadastro.getStatusCode());
+        assertNotNull(respCadastro.getBody());
+        var corpoCadastro = (FinancasController.DespesaResponseDTO) respCadastro.getBody();
+        assertEquals("PENDENTE", corpoCadastro.status());
+        assertEquals("Manutenção Preventiva de Elevadores", corpoCadastro.descricao());
+
+        UUID despesaId = corpoCadastro.id();
+        DespesaJpaEntity entidadeSalva = new DespesaJpaEntity();
+        entidadeSalva.setId(despesaId);
+        entidadeSalva.setDescricao(corpoCadastro.descricao());
+        entidadeSalva.setValor(corpoCadastro.valor());
+        entidadeSalva.setDataVencimento(corpoCadastro.dataVencimento());
+        entidadeSalva.setStatus("PENDENTE");
+
+        when(despesaRepository.findById(despesaId)).thenReturn(Optional.of(entidadeSalva));
+
+        var respPagamento = financasController.registrarPagamentoDespesa(despesaId, sindico, new MockHttpServletRequest());
+        assertEquals(HttpStatus.OK, respPagamento.getStatusCode());
+        assertNotNull(respPagamento.getBody());
+        var corpoPagamento = (FinancasController.DespesaResponseDTO) respPagamento.getBody();
+        assertEquals("PAGO", corpoPagamento.status());
+        assertNotNull(corpoPagamento.dataPagamento());
+
+        when(despesaRepository.findAllByOrderByDataVencimentoDesc()).thenReturn(List.of(entidadeSalva));
+        var respLista = financasController.listarDespesas();
+        assertEquals(HttpStatus.OK, respLista.getStatusCode());
+        assertEquals(1, respLista.getBody().size());
+    }
+
+    @Test
+    @DisplayName("Assembleia Virtual: bloqueia voto de morador inadimplente com base no Art. 1.335, III do Código Civil")
+    void deveBloquearVotoDeMoradorInadimplenteConformeArt1335CodigoCivil() {
+        VotacaoRepository votacaoRepo = mock(VotacaoRepository.class);
+        VotoRepository votoRepo = mock(VotoRepository.class);
+        SpringDataUsuarioRepository usuarioRepo = mock(SpringDataUsuarioRepository.class);
+        SpringDataBoletoRepository boletoRepo = mock(SpringDataBoletoRepository.class);
+
+        VotacaoService votacaoService = new VotacaoService(votacaoRepo, votoRepo, usuarioRepo, boletoRepo);
+
+        UsuarioJpaEntity morador = new UsuarioJpaEntity();
+        morador.setId(UUID.randomUUID());
+        morador.setEmail("morador.inadimplente@condominio.com");
+        morador.setApartamento("302");
+
+        BoletoJpaEntity boletoVencido = new BoletoJpaEntity();
+        boletoVencido.setId(UUID.randomUUID());
+        boletoVencido.setStatus("VENCIDO");
+        boletoVencido.setDataVencimento(LocalDate.now().minusDays(5));
+        boletoVencido.setUnidadeTexto("Apto 302");
+
+        when(usuarioRepo.findByEmail("morador.inadimplente@condominio.com")).thenReturn(Optional.of(morador));
+        when(boletoRepo.findByUnidadeTextoContainingIgnoreCaseOrderByDataVencimentoDesc("302"))
+                .thenReturn(List.of(boletoVencido));
+
+        assertFalse(votacaoService.verificarAdimplencia(morador));
+
+        UUID votacaoId = UUID.randomUUID();
+        Votacao votacao = new Votacao();
+        votacao.setId(votacaoId);
+        votacao.setStatus(VotacaoStatus.ABERTA);
+        votacao.setDataEncerramento(LocalDateTime.now().plusDays(2));
+
+        OpcaoVotacao opcao = new OpcaoVotacao();
+        UUID opcaoId = UUID.randomUUID();
+        opcao.setId(opcaoId);
+        opcao.setVotacao(votacao);
+        votacao.setOpcoes(List.of(opcao));
+
+        when(votacaoRepo.findById(votacaoId)).thenReturn(Optional.of(votacao));
+
+        VotoRequestDTO votoDto = new VotoRequestDTO();
+        votoDto.setOpcaoId(opcaoId);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                votacaoService.registrarVoto(votacaoId, votoDto, "morador.inadimplente@condominio.com")
+        );
+
+        assertTrue(ex.getMessage().contains("adimplente"));
+        verify(votoRepo, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Multi-Tenancy: Super Admin lista todos os condomínios provisionados na plataforma")
+    void deveListarCondominiosProvisionadosParaSuperAdmin() {
+        CondominioRepository condRepo = mock(CondominioRepository.class);
+        CadastrarCondominioUseCase useCase = mock(CadastrarCondominioUseCase.class);
+        CondominioController condController = new CondominioController(useCase, condRepo);
+
+        Condominio c1 = new Condominio(UUID.randomUUID(), "Residencial Jardins", "12345678000199", "resjardins");
+        when(condRepo.listarTodos()).thenReturn(List.of(c1));
+
+        var resposta = condController.listar();
+        assertEquals(HttpStatus.OK, resposta.getStatusCode());
+        assertNotNull(resposta.getBody());
+        assertEquals(1, resposta.getBody().size());
+        assertEquals("Residencial Jardins", resposta.getBody().get(0).nome());
+        assertEquals("resjardins", resposta.getBody().get(0).tenantId());
     }
 }

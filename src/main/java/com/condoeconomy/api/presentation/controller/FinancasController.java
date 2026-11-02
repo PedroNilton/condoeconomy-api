@@ -23,7 +23,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -182,5 +184,105 @@ public class FinancasController {
     @PreAuthorize("hasAnyRole('ROLE_SINDICO', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<List<AuditoriaSegurancaJpaEntity>> listarAuditoriaCondominio() {
         return ResponseEntity.ok(auditService.listarRecentesCondominio());
+    }
+
+    public record SalvarDespesaRequestDTO(
+            @NotBlank(message = "A descrição da despesa é obrigatória")
+            @Size(max = 200, message = "A descrição deve ter no máximo 200 caracteres")
+            String descricao,
+
+            @NotNull(message = "O valor da despesa é obrigatório")
+            @DecimalMin(value = "0.01", message = "O valor deve ser maior que zero")
+            BigDecimal valor,
+
+            @NotNull(message = "A data de vencimento é obrigatória")
+            LocalDate dataVencimento,
+
+            String status
+    ) {}
+
+    public record DespesaResponseDTO(
+            UUID id,
+            String descricao,
+            BigDecimal valor,
+            LocalDate dataVencimento,
+            LocalDate dataPagamento,
+            String status
+    ) {
+        public static DespesaResponseDTO fromEntity(com.condoeconomy.api.infrastructure.persistence.entity.financeiro.DespesaJpaEntity d) {
+            return new DespesaResponseDTO(
+                    d.getId(),
+                    d.getDescricao(),
+                    d.getValor(),
+                    d.getDataVencimento(),
+                    d.getDataPagamento(),
+                    d.getStatus()
+            );
+        }
+    }
+
+    @GetMapping("/despesas")
+    @PreAuthorize("hasAnyRole('ROLE_SINDICO', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<List<DespesaResponseDTO>> listarDespesas() {
+        var despesas = despesaRepository.findAllByOrderByDataVencimentoDesc().stream()
+                .map(DespesaResponseDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(despesas);
+    }
+
+    @PostMapping("/despesas")
+    @Transactional
+    @PreAuthorize("hasAnyRole('ROLE_SINDICO', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<?> cadastrarDespesa(
+            @RequestBody @Valid SalvarDespesaRequestDTO dto,
+            @AuthenticationPrincipal UsuarioJpaEntity operador,
+            HttpServletRequest request) {
+
+        String ip = request.getRemoteAddr();
+        try {
+            SecuritySanitizer.validarTextoSeguro(dto.descricao(), "descricao");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+        }
+
+        String descLimpa = SecuritySanitizer.sanitizar(dto.descricao());
+        String status = "PAGO".equalsIgnoreCase(dto.status()) ? "PAGO" : "PENDENTE";
+        LocalDate dataPagamento = "PAGO".equals(status) ? LocalDate.now() : null;
+
+        var nova = new com.condoeconomy.api.infrastructure.persistence.entity.financeiro.DespesaJpaEntity();
+        nova.setId(UUID.randomUUID());
+        nova.setDescricao(descLimpa);
+        nova.setValor(dto.valor());
+        nova.setDataVencimento(dto.dataVencimento());
+        nova.setDataPagamento(dataPagamento);
+        nova.setStatus(status);
+
+        var salva = despesaRepository.save(nova);
+
+        auditService.registrarUsuario(operador, "DESPESA_CADASTRADA_ADMIN", "INFO", ip,
+                "Despesa '" + salva.getDescricao() + "' cadastrada (Valor: R$ " + salva.getValor() + ", Status: " + salva.getStatus() + ").");
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(DespesaResponseDTO.fromEntity(salva));
+    }
+
+    @PutMapping("/despesas/{id}/pagar")
+    @Transactional
+    @PreAuthorize("hasAnyRole('ROLE_SINDICO', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<?> registrarPagamentoDespesa(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UsuarioJpaEntity operador,
+            HttpServletRequest request) {
+
+        String ip = request.getRemoteAddr();
+        return despesaRepository.findById(id).map(despesa -> {
+            despesa.setStatus("PAGO");
+            despesa.setDataPagamento(LocalDate.now());
+            var salva = despesaRepository.save(despesa);
+
+            auditService.registrarUsuario(operador, "DESPESA_PAGA_ADMIN", "INFO", ip,
+                    "Pagamento da despesa '" + salva.getDescricao() + "' registrado (Valor: R$ " + salva.getValor() + ").");
+
+            return ResponseEntity.ok(DespesaResponseDTO.fromEntity(salva));
+        }).orElse(ResponseEntity.notFound().build());
     }
 }
