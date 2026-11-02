@@ -3,6 +3,8 @@ package com.condoeconomy.api.core.security;
 import com.condoeconomy.api.application.gateway.CondominioRepository;
 import com.condoeconomy.api.application.gateway.PedidoRepository;
 import com.condoeconomy.api.application.gateway.ProdutoRepository;
+import com.condoeconomy.api.application.service.NotificationService;
+import com.condoeconomy.api.application.service.RotinasAgendadasService;
 import com.condoeconomy.api.application.service.VotacaoService;
 import com.condoeconomy.api.application.service.notification.FirebasePushNotificationServiceImpl;
 import com.condoeconomy.api.application.service.payment.AsaasGatewayPagamentoServiceImpl;
@@ -21,6 +23,7 @@ import com.condoeconomy.api.infrastructure.persistence.entity.PreferenciaNotific
 import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.entity.financeiro.BoletoJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.entity.financeiro.DespesaJpaEntity;
+import com.condoeconomy.api.infrastructure.persistence.entity.reserva.ReservaJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataMoradorAdicionalRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataPetRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataPreferenciaNotificacaoRepository;
@@ -28,6 +31,7 @@ import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataUsua
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataVeiculoRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.financeiro.SpringDataBoletoRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.financeiro.SpringDataDespesaRepository;
+import com.condoeconomy.api.infrastructure.persistence.repository.reserva.SpringDataReservaRepository;
 import com.condoeconomy.api.infrastructure.repository.VotacaoRepository;
 import com.condoeconomy.api.infrastructure.repository.VotoRepository;
 import com.condoeconomy.api.presentation.controller.CondominioController;
@@ -443,5 +447,117 @@ class FluxosOperacionaisIntegracaoTest {
         assertThrows(IllegalArgumentException.class, () ->
                 chamadoController.criarChamado(dtoInseguro, auth)
         );
+    }
+
+    @Test
+    @DisplayName("Rotinas Agendadas: expira boletos, encerra votações e cancela reservas pendentes expiradas")
+    void deveExecutarRotinasAgendadasDeBoletosVotacoesEReservas() {
+        var mockBoletoRepo = mock(SpringDataBoletoRepository.class);
+        var mockVotacaoRepo = mock(VotacaoRepository.class);
+        var mockReservaRepo = mock(SpringDataReservaRepository.class);
+        var mockNotificationService = mock(NotificationService.class);
+
+        var rotinas = new RotinasAgendadasService(
+                mockBoletoRepo,
+                mockVotacaoRepo,
+                mockReservaRepo,
+                mockNotificationService
+        );
+
+        // 1. Boletos vencidos
+        var boletoAtrasado = new BoletoJpaEntity(
+                UUID.randomUUID(), "Apto 101", "João", "10/2026",
+                BigDecimal.valueOf(500), LocalDate.now().minusDays(5), null,
+                "PENDENTE", "123456", "url"
+        );
+        when(mockBoletoRepo.findByStatusAndDataVencimentoBefore(eq("PENDENTE"), any(LocalDate.class)))
+                .thenReturn(List.of(boletoAtrasado));
+
+        int boletosAtualizados = rotinas.atualizarBoletosVencidos();
+        assertEquals(1, boletosAtualizados);
+        assertEquals("VENCIDO", boletoAtrasado.getStatus());
+        verify(mockBoletoRepo).save(boletoAtrasado);
+
+        // 2. Votações expiradas
+        var votacaoExpirada = new Votacao();
+        votacaoExpirada.setId(UUID.randomUUID());
+        votacaoExpirada.setTitulo("Reforma da Fachada");
+        votacaoExpirada.setStatus(VotacaoStatus.ABERTA);
+        votacaoExpirada.setDataEncerramento(LocalDateTime.now().minusHours(1));
+
+        when(mockVotacaoRepo.findByStatusAndDataEncerramentoBefore(eq(VotacaoStatus.ABERTA), any(LocalDateTime.class)))
+                .thenReturn(List.of(votacaoExpirada));
+
+        int votacoesEncerradas = rotinas.encerrarVotacoesExpiradas();
+        assertEquals(1, votacoesEncerradas);
+        assertEquals(VotacaoStatus.ENCERRADA, votacaoExpirada.getStatus());
+        verify(mockVotacaoRepo).save(votacaoExpirada);
+
+        // 3. Reservas não respondidas com data do evento ultrapassada
+        var reservaExpirada = new ReservaJpaEntity();
+        reservaExpirada.setId(UUID.randomUUID());
+        reservaExpirada.setUnidadeTexto("Apto 202");
+        reservaExpirada.setDataReserva(LocalDate.now().minusDays(1));
+        reservaExpirada.setStatus("PENDENTE_APROVACAO");
+
+        when(mockReservaRepo.findByStatusAndDataReservaBefore(eq("PENDENTE_APROVACAO"), any(LocalDate.class)))
+                .thenReturn(List.of(reservaExpirada));
+
+        int reservasCanceladas = rotinas.expirarReservasNaoRespondidas();
+        assertEquals(1, reservasCanceladas);
+        assertEquals("REJEITADA", reservaExpirada.getStatus());
+        assertTrue(reservaExpirada.getMotivoRejeicao().contains("Cancelada automaticamente"));
+        verify(mockReservaRepo).save(reservaExpirada);
+        verify(mockNotificationService).notifyReservasUpdate();
+    }
+
+    @Test
+    @DisplayName("Finanças: gera balancete mensal consolidado com receitas, despesas e taxa de adimplência")
+    void deveGerarBalanceteMensalConsolidadoComReceitasEDespesas() {
+        int mes = 11;
+        int ano = 2026;
+
+        var b1 = new BoletoJpaEntity(
+                UUID.randomUUID(), "Apto 101", "Ana Silva", "11/2026",
+                BigDecimal.valueOf(400.00), LocalDate.of(2026, 11, 10), LocalDate.of(2026, 11, 8),
+                "PAGO", "111", null
+        );
+        var b2 = new BoletoJpaEntity(
+                UUID.randomUUID(), "Apto 102", "Bruno Lima", "11/2026",
+                BigDecimal.valueOf(400.00), LocalDate.of(2026, 11, 10), null,
+                "VENCIDO", "222", null
+        );
+        var b3 = new BoletoJpaEntity(
+                UUID.randomUUID(), "Apto 103", "Carla Souza", "11/2026",
+                BigDecimal.valueOf(400.00), LocalDate.of(2026, 11, 15), null,
+                "PENDENTE", "333", null
+        );
+
+        when(boletoRepository.findAll()).thenReturn(List.of(b1, b2, b3));
+
+        var d1 = new DespesaJpaEntity();
+        d1.setId(UUID.randomUUID());
+        d1.setDescricao("Manutenção de Elevadores");
+        d1.setValor(BigDecimal.valueOf(250.00));
+        d1.setDataVencimento(LocalDate.of(2026, 11, 5));
+        d1.setDataPagamento(LocalDate.of(2026, 11, 5));
+        d1.setStatus("PAGO");
+
+        when(despesaRepository.findAll()).thenReturn(List.of(d1));
+
+        var resp = financasController.gerarBalancete(mes, ano);
+        assertEquals(HttpStatus.OK, resp.getStatusCode());
+        var balancete = resp.getBody();
+        assertNotNull(balancete);
+
+        assertEquals(mes, balancete.mes());
+        assertEquals(ano, balancete.ano());
+        assertEquals(BigDecimal.valueOf(400.00), balancete.totalReceitas());
+        assertEquals(BigDecimal.valueOf(250.00), balancete.totalDespesas());
+        assertEquals(BigDecimal.valueOf(150.00), balancete.saldoOperacional());
+        assertEquals(3, balancete.totalBoletosEmitidos());
+        assertEquals(1, balancete.totalBoletosPagos());
+        assertEquals(1, balancete.receitas().size());
+        assertEquals(1, balancete.despesas().size());
     }
 }

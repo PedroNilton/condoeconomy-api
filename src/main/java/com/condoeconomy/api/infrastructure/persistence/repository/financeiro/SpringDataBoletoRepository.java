@@ -3,6 +3,7 @@ package com.condoeconomy.api.infrastructure.persistence.repository.financeiro;
 import com.condoeconomy.api.infrastructure.persistence.entity.financeiro.BoletoJpaEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -10,6 +11,7 @@ public interface SpringDataBoletoRepository extends JpaRepository<BoletoJpaEntit
     List<BoletoJpaEntity> findByUnidadeTextoContainingIgnoreCaseOrderByDataVencimentoDesc(String unidadeTexto);
     List<BoletoJpaEntity> findAllByOrderByDataVencimentoDesc();
     List<BoletoJpaEntity> findTop5ByOrderByDataVencimentoDesc();
+    List<BoletoJpaEntity> findByStatusAndDataVencimentoBefore(String status, LocalDate data);
     
     @org.springframework.data.jpa.repository.Query("SELECT SUM(b.valor) FROM BoletoJpaEntity b")
     java.math.BigDecimal sumTotalEsperado();

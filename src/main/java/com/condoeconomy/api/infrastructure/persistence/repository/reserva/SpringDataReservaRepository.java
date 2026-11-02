@@ -11,5 +11,6 @@ public interface SpringDataReservaRepository extends JpaRepository<ReservaJpaEnt
     List<ReservaJpaEntity> findByStatusOrderByDataReservaAscHoraInicioAsc(String status);
     List<ReservaJpaEntity> findByDataReservaAndStatusOrderByHoraInicioAsc(LocalDate data, String status);
     List<ReservaJpaEntity> findByUnidadeTextoOrderByDataReservaDesc(String unidadeTexto);
+    List<ReservaJpaEntity> findByStatusAndDataReservaBefore(String status, LocalDate data);
     boolean existsByAreaComumIdAndDataReservaAndStatusNot(UUID areaComumId, LocalDate data, String status);
 }

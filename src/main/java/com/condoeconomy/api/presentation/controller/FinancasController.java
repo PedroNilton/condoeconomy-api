@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
@@ -284,5 +285,99 @@ public class FinancasController {
 
             return ResponseEntity.ok(DespesaResponseDTO.fromEntity(salva));
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+    public record ItemBalanceteDTO(
+            String descricao,
+            BigDecimal valor,
+            LocalDate data,
+            String tipo
+    ) {}
+
+    public record BalanceteMensalDTO(
+            int mes,
+            int ano,
+            BigDecimal totalReceitas,
+            BigDecimal totalDespesas,
+            BigDecimal saldoOperacional,
+            long totalBoletosEmitidos,
+            long totalBoletosPagos,
+            long totalBoletosInadimplentes,
+            BigDecimal taxaAdimplencia,
+            List<ItemBalanceteDTO> receitas,
+            List<ItemBalanceteDTO> despesas
+    ) {}
+
+    @GetMapping("/balancete")
+    @PreAuthorize("hasAnyRole('ROLE_SINDICO', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<BalanceteMensalDTO> gerarBalancete(
+            @RequestParam(required = false) Integer mes,
+            @RequestParam(required = false) Integer ano) {
+        
+        LocalDate agora = LocalDate.now();
+        int mesAlvo = (mes != null && mes >= 1 && mes <= 12) ? mes : agora.getMonthValue();
+        int anoAlvo = (ano != null && ano >= 2000 && ano <= 2100) ? ano : agora.getYear();
+
+        LocalDate inicioMes = LocalDate.of(anoAlvo, mesAlvo, 1);
+        LocalDate fimMes = inicioMes.withDayOfMonth(inicioMes.lengthOfMonth());
+
+        var todosBoletos = boletoRepository.findAll();
+        var boletosDoMes = todosBoletos.stream()
+                .filter(b -> b.getDataVencimento() != null &&
+                        !b.getDataVencimento().isBefore(inicioMes) &&
+                        !b.getDataVencimento().isAfter(fimMes))
+                .toList();
+
+        List<ItemBalanceteDTO> itensReceitas = boletosDoMes.stream()
+                .filter(b -> "PAGO".equalsIgnoreCase(b.getStatus()))
+                .map(b -> new ItemBalanceteDTO(
+                        "Cota Condominial - " + b.getUnidadeTexto() + " (" + b.getMoradorResponsavel() + ")",
+                        b.getValor(),
+                        b.getDataPagamento() != null ? b.getDataPagamento() : b.getDataVencimento(),
+                        "RECEITA"
+                ))
+                .toList();
+
+        BigDecimal totalReceitas = itensReceitas.stream()
+                .map(ItemBalanceteDTO::valor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        var todasDespesas = despesaRepository.findAll();
+        var despesasPagasDoMes = todasDespesas.stream()
+                .filter(d -> "PAGO".equalsIgnoreCase(d.getStatus()) &&
+                        d.getDataPagamento() != null &&
+                        !d.getDataPagamento().isBefore(inicioMes) &&
+                        !d.getDataPagamento().isAfter(fimMes))
+                .toList();
+
+        List<ItemBalanceteDTO> itensDespesas = despesasPagasDoMes.stream()
+                .map(d -> new ItemBalanceteDTO(
+                        d.getDescricao(),
+                        d.getValor(),
+                        d.getDataPagamento(),
+                        "DESPESA"
+                ))
+                .toList();
+
+        BigDecimal totalDespesas = itensDespesas.stream()
+                .map(ItemBalanceteDTO::valor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal saldoOperacional = totalReceitas.subtract(totalDespesas);
+
+        long pagos = boletosDoMes.stream().filter(b -> "PAGO".equalsIgnoreCase(b.getStatus())).count();
+        long inadimplentes = boletosDoMes.stream().filter(b -> "VENCIDO".equalsIgnoreCase(b.getStatus()) ||
+                ("PENDENTE".equalsIgnoreCase(b.getStatus()) && b.getDataVencimento().isBefore(agora))).count();
+        long totalEmitidos = boletosDoMes.size();
+
+        BigDecimal taxaAdimplencia = totalEmitidos > 0
+                ? BigDecimal.valueOf(pagos).multiply(BigDecimal.valueOf(100)).divide(BigDecimal.valueOf(totalEmitidos), 2, java.math.RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        return ResponseEntity.ok(new BalanceteMensalDTO(
+                mesAlvo, anoAlvo, totalReceitas, totalDespesas, saldoOperacional,
+                totalEmitidos, pagos, inadimplentes, taxaAdimplencia,
+                itensReceitas, itensDespesas
+        ));
     }
 }
