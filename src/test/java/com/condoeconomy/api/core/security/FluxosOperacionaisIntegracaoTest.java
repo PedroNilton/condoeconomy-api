@@ -7,10 +7,15 @@ import com.condoeconomy.api.application.service.VotacaoService;
 import com.condoeconomy.api.application.service.notification.FirebasePushNotificationServiceImpl;
 import com.condoeconomy.api.application.service.payment.AsaasGatewayPagamentoServiceImpl;
 import com.condoeconomy.api.application.usecase.CadastrarCondominioUseCase;
+import com.condoeconomy.api.application.usecase.chamado.AtualizarStatusChamadoUseCase;
+import com.condoeconomy.api.application.usecase.chamado.CriarChamadoUseCase;
+import com.condoeconomy.api.application.usecase.chamado.EscalarChamadoUseCase;
+import com.condoeconomy.api.application.usecase.chamado.ListarChamadosUseCase;
 import com.condoeconomy.api.domain.entity.Condominio;
 import com.condoeconomy.api.domain.entity.OpcaoVotacao;
 import com.condoeconomy.api.domain.entity.Produto;
 import com.condoeconomy.api.domain.entity.Votacao;
+import com.condoeconomy.api.domain.entity.chamado.Chamado;
 import com.condoeconomy.api.domain.enums.VotacaoStatus;
 import com.condoeconomy.api.infrastructure.persistence.entity.PreferenciaNotificacaoJpaEntity;
 import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
@@ -28,7 +33,9 @@ import com.condoeconomy.api.infrastructure.repository.VotoRepository;
 import com.condoeconomy.api.presentation.controller.CondominioController;
 import com.condoeconomy.api.presentation.controller.FinancasController;
 import com.condoeconomy.api.presentation.controller.admin.AdminCondoStoreController;
+import com.condoeconomy.api.presentation.controller.chamado.ChamadoController;
 import com.condoeconomy.api.presentation.controller.perfil.PerfilController;
+import com.condoeconomy.api.presentation.dto.chamado.CriarChamadoRequestDTO;
 import com.condoeconomy.api.presentation.dto.votacao.VotoRequestDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -389,5 +396,52 @@ class FluxosOperacionaisIntegracaoTest {
         assertEquals(1, resposta.getBody().size());
         assertEquals("Residencial Jardins", resposta.getBody().get(0).nome());
         assertEquals("resjardins", resposta.getBody().get(0).tenantId());
+    }
+
+    @Test
+    @DisplayName("Ouvidoria: cria chamado com foto anexa segura e rejeita payload malicioso")
+    void deveCriarChamadoComFotoAnexoSeguroERejeitarPayloadInseguro() {
+        ListarChamadosUseCase listarUseCase = mock(ListarChamadosUseCase.class);
+        AtualizarStatusChamadoUseCase atualizarUseCase = mock(AtualizarStatusChamadoUseCase.class);
+        CriarChamadoUseCase criarUseCase = mock(CriarChamadoUseCase.class);
+        EscalarChamadoUseCase escalarUseCase = mock(EscalarChamadoUseCase.class);
+
+        ChamadoController chamadoController = new ChamadoController(
+                listarUseCase, atualizarUseCase, criarUseCase, escalarUseCase
+        );
+
+        UsuarioJpaEntity morador = new UsuarioJpaEntity();
+        morador.setId(UUID.randomUUID());
+        morador.setNome("Carlos Silva");
+        morador.setApartamento("101");
+        morador.setBloco("A");
+        morador.setPapel("ROLE_MORADOR");
+
+        Authentication auth = new UsernamePasswordAuthenticationToken(morador, null, Collections.emptyList());
+
+        String fotoSegura = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD";
+        Chamado chamadoCriado = Chamado.abrir("Apto 101 - Bloco A", "Carlos Silva",
+                Chamado.CategoriaChamado.MANUTENCAO, "Vazamento no banheiro", "Infiltração no teto", fotoSegura);
+
+        when(criarUseCase.executar(eq("Apto 101 - Bloco A"), eq("Carlos Silva"), eq("MANUTENCAO"),
+                eq("Vazamento no banheiro"), eq("Infiltração no teto"), eq(fotoSegura)))
+                .thenReturn(chamadoCriado);
+
+        var dtoValido = new CriarChamadoRequestDTO(
+                null, null, "MANUTENCAO", "Vazamento no banheiro", "Infiltração no teto", fotoSegura
+        );
+
+        var respValida = chamadoController.criarChamado(dtoValido, auth);
+        assertEquals(HttpStatus.OK, respValida.getStatusCode());
+        assertNotNull(respValida.getBody());
+        assertEquals(fotoSegura, respValida.getBody().fotoAnexo());
+
+        var dtoInseguro = new CriarChamadoRequestDTO(
+                null, null, "MANUTENCAO", "Vazamento", "Infiltração", "javascript:alert(1)"
+        );
+
+        assertThrows(IllegalArgumentException.class, () ->
+                chamadoController.criarChamado(dtoInseguro, auth)
+        );
     }
 }

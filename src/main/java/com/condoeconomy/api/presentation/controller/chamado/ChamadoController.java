@@ -80,6 +80,9 @@ public class ChamadoController {
         if (request.unidadeTexto() != null && !request.unidadeTexto().isBlank()) {
             SecuritySanitizer.validarTextoSeguro(request.unidadeTexto(), "unidadeTexto");
         }
+        if (request.fotoAnexo() != null && !request.fotoAnexo().isBlank()) {
+            SecuritySanitizer.validarUrlFotoSegura(request.fotoAnexo());
+        }
 
         UsuarioJpaEntity user = (UsuarioJpaEntity) auth.getPrincipal();
         
@@ -95,7 +98,8 @@ public class ChamadoController {
             morador,
             SecuritySanitizer.sanitizar(request.categoria()),
             SecuritySanitizer.sanitizar(request.assunto()),
-            SecuritySanitizer.sanitizar(request.descricao())
+            SecuritySanitizer.sanitizar(request.descricao()),
+            request.fotoAnexo() != null && !request.fotoAnexo().isBlank() ? request.fotoAnexo().trim() : null
         );
         return ResponseEntity.ok(ChamadoResponseDTO.fromEntity(chamado));
     }

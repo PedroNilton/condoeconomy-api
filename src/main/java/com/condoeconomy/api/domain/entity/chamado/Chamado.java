@@ -14,6 +14,7 @@ public class Chamado {
     private LocalDateTime dataAbertura;
     private LocalDateTime dataResolucao;
     private boolean escaladoSindico;
+    private String fotoAnexo;
 
     public enum StatusChamado { ABERTO, EM_ANDAMENTO, RESOLVIDO }
     public enum CategoriaChamado { RECLAMACAO, SUGESTAO, MANUTENCAO, OUTROS }
@@ -23,6 +24,12 @@ public class Chamado {
     public Chamado(UUID id, String unidadeTexto, String moradorSolicitante, CategoriaChamado categoria, 
                    String assunto, String descricao, StatusChamado status, 
                    LocalDateTime dataAbertura, LocalDateTime dataResolucao, boolean escaladoSindico) {
+        this(id, unidadeTexto, moradorSolicitante, categoria, assunto, descricao, status, dataAbertura, dataResolucao, escaladoSindico, null);
+    }
+
+    public Chamado(UUID id, String unidadeTexto, String moradorSolicitante, CategoriaChamado categoria, 
+                   String assunto, String descricao, StatusChamado status, 
+                   LocalDateTime dataAbertura, LocalDateTime dataResolucao, boolean escaladoSindico, String fotoAnexo) {
         this.id = id;
         this.unidadeTexto = unidadeTexto;
         this.moradorSolicitante = moradorSolicitante;
@@ -33,12 +40,18 @@ public class Chamado {
         this.dataAbertura = dataAbertura;
         this.dataResolucao = dataResolucao;
         this.escaladoSindico = escaladoSindico;
+        this.fotoAnexo = fotoAnexo;
     }
 
     public static Chamado abrir(String unidadeTexto, String moradorSolicitante, 
                                 CategoriaChamado categoria, String assunto, String descricao) {
+        return abrir(unidadeTexto, moradorSolicitante, categoria, assunto, descricao, null);
+    }
+
+    public static Chamado abrir(String unidadeTexto, String moradorSolicitante, 
+                                CategoriaChamado categoria, String assunto, String descricao, String fotoAnexo) {
         return new Chamado(UUID.randomUUID(), unidadeTexto, moradorSolicitante, categoria, 
-                           assunto, descricao, StatusChamado.ABERTO, LocalDateTime.now(), null, false);
+                           assunto, descricao, StatusChamado.ABERTO, LocalDateTime.now(), null, false, fotoAnexo);
     }
 
     public void iniciarAtendimento() {
@@ -68,4 +81,5 @@ public class Chamado {
     public LocalDateTime getDataAbertura() { return dataAbertura; }
     public LocalDateTime getDataResolucao() { return dataResolucao; }
     public boolean isEscaladoSindico() { return escaladoSindico; }
+    public String getFotoAnexo() { return fotoAnexo; }
 }

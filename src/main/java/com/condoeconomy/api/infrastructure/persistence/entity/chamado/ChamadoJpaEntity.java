@@ -27,4 +27,5 @@ public class ChamadoJpaEntity {
     private LocalDateTime dataAbertura;
     private LocalDateTime dataResolucao;
     private boolean escaladoSindico;
+    private String fotoAnexo;
 }

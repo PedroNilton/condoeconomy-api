@@ -16,8 +16,12 @@ public class CriarChamadoUseCase {
     }
 
     public Chamado executar(String unidadeTexto, String morador, String categoriaStr, String assunto, String descricao) {
+        return executar(unidadeTexto, morador, categoriaStr, assunto, descricao, null);
+    }
+
+    public Chamado executar(String unidadeTexto, String morador, String categoriaStr, String assunto, String descricao, String fotoAnexo) {
         Chamado.CategoriaChamado categoria = Chamado.CategoriaChamado.valueOf(categoriaStr.toUpperCase());
-        Chamado chamado = Chamado.abrir(unidadeTexto, morador, categoria, assunto, descricao);
+        Chamado chamado = Chamado.abrir(unidadeTexto, morador, categoria, assunto, descricao, fotoAnexo);
         Chamado salvo = chamadoRepository.salvar(chamado);
         notificationService.notifyChamadosUpdate();
         return salvo;

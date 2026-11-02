@@ -14,14 +14,15 @@ public record ChamadoResponseDTO(
     String status,
     LocalDateTime dataAbertura,
     LocalDateTime dataResolucao,
-    boolean escaladoSindico
+    boolean escaladoSindico,
+    String fotoAnexo
 ) {
     public static ChamadoResponseDTO fromEntity(Chamado c) {
         return new ChamadoResponseDTO(
             c.getId(), c.getUnidadeTexto(), c.getMoradorSolicitante(), 
             c.getCategoria().name(), c.getAssunto(), c.getDescricao(), 
             c.getStatus().name(), c.getDataAbertura(), c.getDataResolucao(),
-            c.isEscaladoSindico()
+            c.isEscaladoSindico(), c.getFotoAnexo()
         );
     }
 }
