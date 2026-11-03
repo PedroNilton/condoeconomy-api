@@ -9,7 +9,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,9 +23,16 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -108,6 +117,29 @@ public class AdminUsuarioController {
     ) {}
 
     public record AtualizarStatusUsuarioDTO(boolean ativo) {}
+
+    public record ItemErroImportacaoDTO(
+            int linha,
+            String email,
+            String motivo
+    ) {}
+
+    public record MoradorImportadoResumoDTO(
+            UUID id,
+            String nome,
+            String email,
+            String apartamento,
+            String bloco,
+            String telefone
+    ) {}
+
+    public record ImportacaoMoradoresResultadoDTO(
+            int totalProcessados,
+            int sucessoCount,
+            int falhaCount,
+            List<MoradorImportadoResumoDTO> importados,
+            List<ItemErroImportacaoDTO> erros
+    ) {}
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> listarUsuarios(
@@ -232,7 +264,7 @@ public class AdminUsuarioController {
         return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioAdminResponseDTO.fromEntity(salvo));
     }
 
-    @PatchMapping("/{id}/status")
+    @RequestMapping(value = "/{id}/status", method = {RequestMethod.PATCH, RequestMethod.PUT})
     @Transactional
     public ResponseEntity<?> alterarStatusConta(
             @PathVariable UUID id,
@@ -279,6 +311,195 @@ public class AdminUsuarioController {
         );
 
         return ResponseEntity.ok(UsuarioAdminResponseDTO.fromEntity(atualizado));
+    }
+
+    @GetMapping(value = "/modelo-csv", produces = "text/csv; charset=UTF-8")
+    public ResponseEntity<byte[]> baixarModeloCsv() {
+        String modelo = "Nome;Email;Apartamento;Bloco;Telefone;SenhaProvisoria\n" +
+                "Carlos Oliveira;carlos.oliveira@email.com;101;Bloco A;11999990001;Senha@123\n" +
+                "Mariana Santos;mariana.santos@email.com;102;Bloco A;11999990002;Senha@123\n" +
+                "Lucas Ferreira;lucas.ferreira@email.com;201;Bloco B;11999990003;Senha@123\n";
+        byte[] bytes = modelo.getBytes(StandardCharsets.UTF_8);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"modelo_importacao_moradores.csv\"")
+                .header(HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
+                .body(bytes);
+    }
+
+    @PostMapping(value = "/importar-csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Transactional
+    public ResponseEntity<?> importarMoradoresCsv(
+            @RequestParam("arquivo") MultipartFile arquivo,
+            @AuthenticationPrincipal UsuarioJpaEntity gestorAutenticado,
+            HttpServletRequest request) {
+
+        String ip = request.getRemoteAddr();
+
+        if (arquivo == null || arquivo.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Nenhum arquivo CSV foi enviado."));
+        }
+
+        String nomeOriginal = arquivo.getOriginalFilename();
+        if (nomeOriginal != null && !nomeOriginal.toLowerCase(Locale.ROOT).endsWith(".csv")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Formato de arquivo inválido. Apenas arquivos .csv são suportados."));
+        }
+
+        List<UsuarioJpaEntity> paraSalvar = new ArrayList<>();
+        List<MoradorImportadoResumoDTO> importados = new ArrayList<>();
+        List<ItemErroImportacaoDTO> erros = new ArrayList<>();
+        Set<String> emailsNoLote = new HashSet<>();
+
+        int linhaNum = 0;
+        int totalLinhas = 0;
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(arquivo.getInputStream(), StandardCharsets.UTF_8))) {
+            String linha = reader.readLine();
+            if (linha != null && linha.startsWith("\uFEFF")) {
+                linha = linha.substring(1);
+            }
+
+            if (linha == null || linha.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "O arquivo CSV está vazio."));
+            }
+
+            String delimitador = linha.contains(";") ? ";" : ",";
+
+            boolean primeiraLinhaCabecalho = linha.toLowerCase(Locale.ROOT).contains("nome")
+                    || linha.toLowerCase(Locale.ROOT).contains("email");
+
+            if (!primeiraLinhaCabecalho) {
+                linhaNum++;
+                totalLinhas++;
+                processarLinhaCsv(linha, delimitador, linhaNum, paraSalvar, importados, erros, emailsNoLote);
+            }
+
+            while ((linha = reader.readLine()) != null) {
+                linhaNum++;
+                if (linha.trim().isEmpty()) continue;
+                totalLinhas++;
+                processarLinhaCsv(linha, delimitador, linhaNum, paraSalvar, importados, erros, emailsNoLote);
+            }
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Erro ao processar arquivo CSV: " + e.getMessage()));
+        }
+
+        if (!paraSalvar.isEmpty()) {
+            usuarioRepository.saveAll(paraSalvar);
+            auditService.registrarUsuario(
+                    gestorAutenticado,
+                    "IMPORTACAO_MORADORES_LOTE",
+                    "INFO",
+                    ip,
+                    "Importação de moradores via CSV concluída com sucesso: " + paraSalvar.size() + " moradores cadastrados."
+            );
+        }
+
+        return ResponseEntity.ok(new ImportacaoMoradoresResultadoDTO(
+                totalLinhas,
+                importados.size(),
+                erros.size(),
+                importados,
+                erros
+        ));
+    }
+
+    private void processarLinhaCsv(
+            String linha,
+            String delimitador,
+            int linhaNum,
+            List<UsuarioJpaEntity> paraSalvar,
+            List<MoradorImportadoResumoDTO> importados,
+            List<ItemErroImportacaoDTO> erros,
+            Set<String> emailsNoLote
+    ) {
+        String[] colunas = linha.split(delimitador, -1);
+        if (colunas.length < 2) {
+            erros.add(new ItemErroImportacaoDTO(linhaNum, "-", "Linha incompleta ou delimitador incompatível (use ponto e vírgula ou vírgula)."));
+            return;
+        }
+
+        String nome = limparAspas(colunas.length > 0 ? colunas[0] : "");
+        String email = limparAspas(colunas.length > 1 ? colunas[1] : "");
+        String apartamento = limparAspas(colunas.length > 2 ? colunas[2] : "");
+        String bloco = limparAspas(colunas.length > 3 ? colunas[3] : "");
+        String telefone = limparAspas(colunas.length > 4 ? colunas[4] : "");
+        String senha = limparAspas(colunas.length > 5 ? colunas[5] : "");
+
+        if (nome.isBlank()) {
+            erros.add(new ItemErroImportacaoDTO(linhaNum, email, "Nome do morador é obrigatório."));
+            return;
+        }
+
+        if (email.isBlank() || !email.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            erros.add(new ItemErroImportacaoDTO(linhaNum, email, "E-mail inválido ou em branco."));
+            return;
+        }
+
+        String emailLower = email.toLowerCase(Locale.ROOT);
+        if (emailsNoLote.contains(emailLower)) {
+            erros.add(new ItemErroImportacaoDTO(linhaNum, email, "E-mail duplicado dentro do próprio arquivo CSV."));
+            return;
+        }
+
+        if (usuarioRepository.existsByEmailIgnoreCase(emailLower)) {
+            erros.add(new ItemErroImportacaoDTO(linhaNum, email, "E-mail já cadastrado no sistema."));
+            return;
+        }
+
+        if (apartamento.isBlank()) {
+            erros.add(new ItemErroImportacaoDTO(linhaNum, email, "Unidade/Apartamento é obrigatório para cadastro de morador."));
+            return;
+        }
+
+        try {
+            SecuritySanitizer.validarTextoSeguro(nome, "nome");
+            SecuritySanitizer.validarTextoSeguro(email, "email");
+            SecuritySanitizer.validarTextoSeguro(apartamento, "apartamento");
+            if (!bloco.isBlank()) SecuritySanitizer.validarTextoSeguro(bloco, "bloco");
+            if (!telefone.isBlank()) SecuritySanitizer.validarTextoSeguro(telefone, "telefone");
+            if (!senha.isBlank() && SecuritySanitizer.contemPadroesMaliciosos(senha)) {
+                erros.add(new ItemErroImportacaoDTO(linhaNum, email, "Senha provisória com caracteres suspeitos."));
+                return;
+            }
+        } catch (IllegalArgumentException e) {
+            erros.add(new ItemErroImportacaoDTO(linhaNum, email, "Caracteres inseguros detectados: " + e.getMessage()));
+            return;
+        }
+
+        emailsNoLote.add(emailLower);
+
+        String senhaFinal = (!senha.isBlank() && senha.length() >= 6) ? senha : "HabitOS@" + (100 + (int)(Math.random() * 900));
+
+        UUID id = UUID.randomUUID();
+        UsuarioJpaEntity novo = new UsuarioJpaEntity();
+        novo.setId(id);
+        novo.setNome(SecuritySanitizer.sanitizar(nome));
+        novo.setEmail(emailLower);
+        novo.setSenha(passwordEncoder.encode(senhaFinal));
+        novo.setPapel("ROLE_MORADOR");
+        novo.setApartamento(SecuritySanitizer.sanitizar(apartamento));
+        novo.setBloco(!bloco.isBlank() ? SecuritySanitizer.sanitizar(bloco) : null);
+        novo.setTelefone(!telefone.isBlank() ? SecuritySanitizer.sanitizar(telefone) : null);
+        novo.setTokenVersion(1);
+        novo.setAtivo(true);
+
+        paraSalvar.add(novo);
+        importados.add(new MoradorImportadoResumoDTO(id, novo.getNome(), novo.getEmail(), novo.getApartamento(), novo.getBloco(), novo.getTelefone()));
+    }
+
+    private static String limparAspas(String s) {
+        if (s == null) return "";
+        s = s.trim();
+        if (s.startsWith("\"") && s.endsWith("\"") && s.length() >= 2) {
+            return s.substring(1, s.length() - 1).trim();
+        }
+        return s;
     }
 
     private static boolean contem(String valor, String termo) {

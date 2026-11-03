@@ -37,6 +37,7 @@ import com.condoeconomy.api.infrastructure.repository.VotoRepository;
 import com.condoeconomy.api.presentation.controller.CondominioController;
 import com.condoeconomy.api.presentation.controller.FinancasController;
 import com.condoeconomy.api.presentation.controller.admin.AdminCondoStoreController;
+import com.condoeconomy.api.presentation.controller.admin.AdminUsuarioController;
 import com.condoeconomy.api.presentation.controller.chamado.ChamadoController;
 import com.condoeconomy.api.presentation.controller.perfil.PerfilController;
 import com.condoeconomy.api.presentation.dto.chamado.CriarChamadoRequestDTO;
@@ -48,11 +49,13 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -559,5 +562,61 @@ class FluxosOperacionaisIntegracaoTest {
         assertEquals(1, balancete.totalBoletosPagos());
         assertEquals(1, balancete.receitas().size());
         assertEquals(1, balancete.despesas().size());
+    }
+
+    @Test
+    @DisplayName("Admin Usuários: baixa modelo CSV oficial para importação em lote de moradores")
+    void deveBaixarModeloCsvComCabecalhosValidos() {
+        var adminController = new AdminUsuarioController(usuarioRepository, new BCryptPasswordEncoder(), auditService);
+        var resp = adminController.baixarModeloCsv();
+
+        assertEquals(HttpStatus.OK, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        String conteudo = new String(resp.getBody(), StandardCharsets.UTF_8);
+        assertTrue(conteudo.contains("Nome;Email;Apartamento;Bloco"));
+        assertTrue(conteudo.contains("Carlos Oliveira"));
+    }
+
+    @Test
+    @DisplayName("Admin Usuários: importa moradores em lote via CSV com validação, hashing de senha e auditoria")
+    void deveImportarMoradoresEmLoteViaCsvComValidacaoEIgnorarDuplicados() {
+        var adminController = new AdminUsuarioController(usuarioRepository, new BCryptPasswordEncoder(), auditService);
+
+        String csvConteudo = "Nome;Email;Apartamento;Bloco;Telefone;SenhaProvisoria\n" +
+                "Fabio Santos;fabio.santos@email.com;301;Bloco C;11911112222;Senha@123\n" +
+                "Juliana Costa;juliana.costa@email.com;302;Bloco C;11922223333;Senha@123\n" +
+                "Invalido Sem Apto;invalido@email.com;;;;Senha@123\n";
+
+        var mockFile = new MockMultipartFile(
+                "arquivo",
+                "moradores.csv",
+                "text/csv",
+                csvConteudo.getBytes(StandardCharsets.UTF_8)
+        );
+
+        var gestor = new UsuarioJpaEntity();
+        gestor.setId(UUID.randomUUID());
+        gestor.setEmail("sindico@condominio.com");
+        gestor.setPapel("ROLE_SINDICO");
+
+        var request = new MockHttpServletRequest();
+        request.setRemoteAddr("127.0.0.1");
+
+        when(usuarioRepository.existsByEmailIgnoreCase("fabio.santos@email.com")).thenReturn(false);
+        when(usuarioRepository.existsByEmailIgnoreCase("juliana.costa@email.com")).thenReturn(false);
+
+        var response = adminController.importarMoradoresCsv(mockFile, gestor, request);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        var resultado = (AdminUsuarioController.ImportacaoMoradoresResultadoDTO) response.getBody();
+        assertNotNull(resultado);
+        assertEquals(2, resultado.sucessoCount());
+        assertEquals(1, resultado.falhaCount());
+        assertEquals(2, resultado.importados().size());
+        assertEquals(1, resultado.erros().size());
+        assertEquals("Unidade/Apartamento é obrigatório para cadastro de morador.", resultado.erros().get(0).motivo());
+
+        verify(usuarioRepository).saveAll(any());
+        verify(auditService).registrarUsuario(eq(gestor), eq("IMPORTACAO_MORADORES_LOTE"), eq("INFO"), eq("127.0.0.1"), any());
     }
 }
