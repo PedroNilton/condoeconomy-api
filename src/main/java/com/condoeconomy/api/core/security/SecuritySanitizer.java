@@ -111,4 +111,41 @@ public final class SecuritySanitizer {
         int len = limpo.length();
         return "***." + limpo.substring(len - 4, len - 2) + "**";
     }
+
+    /**
+     * Sanitiza células de planilhas CSV contra injeção de fórmulas (CWE-1236 / CSV Formula Injection).
+     * Se o texto iniciar com '=', '+', '-', '@', '\t' ou '\r', prefixa uma aspa simples (')
+     * para forçar softwares de planilhas (Excel, Calc, Google Sheets) a interpretar o conteúdo estritamente como texto.
+     */
+    public static String sanitizarCsvFormula(String input) {
+        if (input == null || input.isBlank()) {
+            return input;
+        }
+        String limpo = input.trim();
+        if (limpo.startsWith("=") || limpo.startsWith("+") || limpo.startsWith("-") || limpo.startsWith("@")
+                || limpo.startsWith("\t") || limpo.startsWith("\r")) {
+            log.warn("[SEGURANÇA] Tentativa de CSV Formula Injection neutralizada em entrada: '{}'", limpo);
+            return "'" + limpo;
+        }
+        return limpo;
+    }
+
+    /**
+     * Mascara endereços de e-mail em conformidade com a LGPD (minimização de dados em logs e relatórios).
+     * Exemplo: carlos.silva@email.com -> c***a@email.com
+     */
+    public static String mascararEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return "***@***.***";
+        }
+        String limpo = email.trim();
+        int atIndex = limpo.indexOf('@');
+        if (atIndex <= 1) {
+            return "*@*" + (atIndex >= 0 ? limpo.substring(atIndex) : "");
+        }
+        String local = limpo.substring(0, atIndex);
+        String dominio = limpo.substring(atIndex);
+        String localMascarado = local.charAt(0) + "***" + local.charAt(local.length() - 1);
+        return localMascarado + dominio;
+    }
 }

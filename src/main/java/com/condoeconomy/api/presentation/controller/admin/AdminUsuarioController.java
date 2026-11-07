@@ -424,11 +424,11 @@ public class AdminUsuarioController {
             return;
         }
 
-        String nome = limparAspas(colunas.length > 0 ? colunas[0] : "");
+        String nome = SecuritySanitizer.sanitizarCsvFormula(limparAspas(colunas.length > 0 ? colunas[0] : ""));
         String email = limparAspas(colunas.length > 1 ? colunas[1] : "");
-        String apartamento = limparAspas(colunas.length > 2 ? colunas[2] : "");
-        String bloco = limparAspas(colunas.length > 3 ? colunas[3] : "");
-        String telefone = limparAspas(colunas.length > 4 ? colunas[4] : "");
+        String apartamento = SecuritySanitizer.sanitizarCsvFormula(limparAspas(colunas.length > 2 ? colunas[2] : ""));
+        String bloco = SecuritySanitizer.sanitizarCsvFormula(limparAspas(colunas.length > 3 ? colunas[3] : ""));
+        String telefone = SecuritySanitizer.sanitizarCsvFormula(limparAspas(colunas.length > 4 ? colunas[4] : ""));
         String senha = limparAspas(colunas.length > 5 ? colunas[5] : "");
 
         if (nome.isBlank()) {

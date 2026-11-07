@@ -95,6 +95,23 @@ class SecurityDefenseInDepthTest {
     }
 
     @Test
+    @DisplayName("Camada 2 (LGPD): Deve mascarar e-mails preservando privacidade")
+    void deveMascararEmailConformeMinimizacaoLgpd() {
+        assertEquals("c***a@email.com", SecuritySanitizer.mascararEmail("carlos.silva@email.com"));
+        assertEquals("a***o@condominio.com.br", SecuritySanitizer.mascararEmail("alberto@condominio.com.br"));
+    }
+
+    @Test
+    @DisplayName("Camada 2 (CWE-1236): Deve neutralizar injeção de fórmulas em planilhas CSV")
+    void deveNeutralizarCsvFormulaInjection() {
+        assertEquals("'=cmd|' /C calc'!A0", SecuritySanitizer.sanitizarCsvFormula("=cmd|' /C calc'!A0"));
+        assertEquals("'+123456", SecuritySanitizer.sanitizarCsvFormula("+123456"));
+        assertEquals("'-2+5*cmd", SecuritySanitizer.sanitizarCsvFormula("-2+5*cmd"));
+        assertEquals("'@SUM(1+1)", SecuritySanitizer.sanitizarCsvFormula("@SUM(1+1)"));
+        assertEquals("Apto 101", SecuritySanitizer.sanitizarCsvFormula("Apto 101"));
+    }
+
+    @Test
     @DisplayName("Camada 1: Deve bloquear login após 5 falhas consecutivas e liberar após sucesso")
     void deveBloquearLoginAposCincoTentativasFalhasEResetarNoSucesso() {
         LoginAttemptService service = new LoginAttemptService();
