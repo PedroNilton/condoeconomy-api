@@ -10,15 +10,18 @@ public record ConvidadoResponseDTO(
     String nome,
     String documento,
     String statusEntrada,
-    LocalDateTime horaEntrada
+    LocalDateTime horaEntrada,
+    boolean adicionadoPortaria
 ) {
     public static ConvidadoResponseDTO fromEntity(Convidado c) {
+        boolean extra = "PORTARIA".equalsIgnoreCase(c.getDocumento());
         return new ConvidadoResponseDTO(
             c.getId(),
             c.getNome(),
-            SecuritySanitizer.mascararDocumento(c.getDocumento()),
+            extra ? "PORTARIA" : SecuritySanitizer.mascararDocumento(c.getDocumento()),
             c.getStatusEntrada().name(),
-            c.getHoraEntrada()
+            c.getHoraEntrada(),
+            extra
         );
     }
 }

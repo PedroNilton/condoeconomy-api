@@ -31,6 +31,16 @@ public class Convidado {
         this.horaEntrada = LocalDateTime.now();
     }
 
+    public void alternarEntrada() {
+        if (this.statusEntrada == StatusEntrada.ENTROU) {
+            this.statusEntrada = StatusEntrada.PENDENTE;
+            this.horaEntrada = null;
+        } else {
+            this.statusEntrada = StatusEntrada.ENTROU;
+            this.horaEntrada = LocalDateTime.now();
+        }
+    }
+
     public UUID getId() { return id; }
     public String getNome() { return nome; }
     public String getDocumento() { return documento; }
