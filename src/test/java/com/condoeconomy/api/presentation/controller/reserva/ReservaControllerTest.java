@@ -2,8 +2,10 @@ package com.condoeconomy.api.presentation.controller.reserva;
 
 import com.condoeconomy.api.application.usecase.reserva.*;
 import com.condoeconomy.api.domain.entity.reserva.AreaComum;
+import com.condoeconomy.api.domain.entity.reserva.Convidado;
 import com.condoeconomy.api.domain.entity.reserva.Reserva;
 import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
+import com.condoeconomy.api.presentation.dto.reserva.AdicionarConvidadoPortariaRequestDTO;
 import com.condoeconomy.api.presentation.dto.reserva.CriarReservaRequestDTO;
 import com.condoeconomy.api.presentation.dto.reserva.RejeitarReservaRequestDTO;
 import com.condoeconomy.api.presentation.dto.reserva.ReservaResponseDTO;
@@ -21,6 +23,7 @@ import org.springframework.security.core.Authentication;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -163,5 +166,74 @@ class ReservaControllerTest {
 
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
         verify(aprovarRejeitarReservaUseCase, times(1)).rejeitar(reservaId, "Área em manutenção técnica programada");
+    }
+
+    @Test
+    @DisplayName("Reservas Portaria: Deve alternar presença de convidado com sucesso")
+    void deveAlternarPresencaConvidadoComSucesso() {
+        Convidado convidado = Convidado.criar("Beatriz Moura", "111.222.333-44");
+        convidado.alternarEntrada();
+        Reserva reserva = Reserva.criar(
+                churrasqueira,
+                "Apto 201 - Bloco 05",
+                "Ana Beatriz",
+                "Aniversário",
+                LocalDate.now(),
+                LocalTime.of(12, 0),
+                LocalTime.of(18, 0),
+                List.of(convidado)
+        );
+        reserva.aprovar();
+
+        when(checkInConvidadoUseCase.alternarEntrada(reserva.getId(), convidado.getId())).thenReturn(reserva);
+
+        ResponseEntity<ReservaResponseDTO> response =
+                controller.toggleCheckInConvidado(reserva.getId(), convidado.getId(), authentication);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("ENTROU", response.getBody().convidados().get(0).statusEntrada());
+    }
+
+    @Test
+    @DisplayName("Reservas Portaria: Deve adicionar convidado extra na portaria e sinalizar adicionadoPortaria=true")
+    void deveAdicionarConvidadoNaPortariaComSucesso() {
+        Convidado extra = Convidado.criar("Tiago Nunes", "PORTARIA");
+        Reserva reserva = Reserva.criar(
+                churrasqueira,
+                "Apto 201 - Bloco 05",
+                "Ana Beatriz",
+                "Aniversário",
+                LocalDate.now(),
+                LocalTime.of(12, 0),
+                LocalTime.of(18, 0),
+                new ArrayList<>(List.of(extra))
+        );
+        reserva.aprovar();
+
+        when(checkInConvidadoUseCase.adicionarConvidadoPortaria(reserva.getId(), "Tiago Nunes")).thenReturn(reserva);
+
+        ResponseEntity<ReservaResponseDTO> response = controller.adicionarConvidadoPortaria(
+                reserva.getId(),
+                new AdicionarConvidadoPortariaRequestDTO("Tiago Nunes"),
+                authentication
+        );
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().convidados().get(0).adicionadoPortaria());
+    }
+
+    @Test
+    @DisplayName("Reservas Portaria: Deve rejeitar adição de convidado com payload XSS")
+    void deveRejeitarConvidadoNaPortariaComXss() {
+        UUID reservaId = UUID.randomUUID();
+        assertThrows(IllegalArgumentException.class, () ->
+                controller.adicionarConvidadoPortaria(
+                        reservaId,
+                        new AdicionarConvidadoPortariaRequestDTO("<img src=x onerror=alert(1)>"),
+                        authentication
+                ));
+        verify(checkInConvidadoUseCase, never()).adicionarConvidadoPortaria(any(), any());
     }
 }

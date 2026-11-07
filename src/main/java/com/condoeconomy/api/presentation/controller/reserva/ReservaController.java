@@ -7,6 +7,7 @@ import com.condoeconomy.api.application.usecase.reserva.ListarAreasComunsUseCase
 import com.condoeconomy.api.application.usecase.reserva.ListarReservasUseCase;
 import com.condoeconomy.api.application.usecase.reserva.ListarMinhasReservasUseCase;
 import com.condoeconomy.api.core.security.SecuritySanitizer;
+import com.condoeconomy.api.presentation.dto.reserva.AdicionarConvidadoPortariaRequestDTO;
 import com.condoeconomy.api.presentation.dto.reserva.AreaComumResponseDTO;
 import com.condoeconomy.api.presentation.dto.reserva.CriarReservaRequestDTO;
 import com.condoeconomy.api.presentation.dto.reserva.ReservaResponseDTO;
@@ -144,6 +145,32 @@ public class ReservaController {
         log.info("[AUDITORIA DE RESERVA] Check-in do convidado ID={} na reserva ID={} registrado pelo operador '{}'",
                 convidadoId, id, operador);
         return ResponseEntity.ok(ReservaResponseDTO.fromEntity(reserva));
+    }
+
+    @PutMapping("/{id}/convidados/{convidadoId}/toggle-checkin")
+    @PreAuthorize("hasAnyRole('ROLE_PORTEIRO', 'ROLE_SINDICO', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<ReservaResponseDTO> toggleCheckInConvidado(
+            @PathVariable UUID id, @PathVariable UUID convidadoId, Authentication auth) {
+        var reserva = checkInConvidadoUseCase.alternarEntrada(id, convidadoId);
+        String operador = auth != null ? auth.getName() : "SISTEMA";
+        log.info("[AUDITORIA DE RESERVA] Alternância de presença do convidado ID={} na reserva ID={} pelo operador '{}'",
+                convidadoId, id, operador);
+        return ResponseEntity.ok(ReservaResponseDTO.fromEntity(reserva));
+    }
+
+    @PostMapping("/{id}/convidados")
+    @PreAuthorize("hasAnyRole('ROLE_PORTEIRO', 'ROLE_SINDICO', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<ReservaResponseDTO> adicionarConvidadoPortaria(
+            @PathVariable UUID id,
+            @Valid @RequestBody AdicionarConvidadoPortariaRequestDTO dto,
+            Authentication auth) {
+        SecuritySanitizer.validarTextoSeguro(dto.nome(), "nomeConvidado");
+        String nomeLimpo = SecuritySanitizer.sanitizar(dto.nome());
+        var reserva = checkInConvidadoUseCase.adicionarConvidadoPortaria(id, nomeLimpo);
+        String operador = auth != null ? auth.getName() : "SISTEMA";
+        log.info("[AUDITORIA DE RESERVA] Convidado extra '{}' adicionado na portaria para reserva ID={} pelo operador '{}'",
+                nomeLimpo, id, operador);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ReservaResponseDTO.fromEntity(reserva));
     }
 
     @PutMapping("/{id}/aprovar")
