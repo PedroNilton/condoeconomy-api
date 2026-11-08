@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
@@ -9,6 +7,8 @@ services:
       POSTGRES_USER: ${DB_USERNAME:-condoadmin}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-condopassword}
       POSTGRES_DB: ${DB_NAME:-condoeconomy_db}
+    ports:
+      - "5433:5432"
     volumes:
       - pgdata_prod:/var/lib/postgresql/data
     healthcheck:
@@ -34,7 +34,7 @@ services:
       DB_USERNAME: ${DB_USERNAME:-condoadmin}
       DB_PASSWORD: ${DB_PASSWORD:-condopassword}
       JWT_SECRET: ${JWT_SECRET:-chave-secreta-de-producao-com-mais-de-32-caracteres-256bits}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,https://app.condoeconomy.com}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:5173,http://localhost:3000,https://app.condoeconomy.com}
     ports:
       - "8080:8080"
     healthcheck:
@@ -58,6 +58,7 @@ services:
       backend:
         condition: service_healthy
     ports:
+      - "5173:80"
       - "80:80"
     networks:
       - condonet
