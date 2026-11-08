@@ -2,6 +2,7 @@ package com.condoeconomy.api.presentation.controller.aviso;
 
 import com.condoeconomy.api.application.usecase.aviso.CriarAvisoUseCase;
 import com.condoeconomy.api.application.usecase.aviso.ListarAvisosUseCase;
+import com.condoeconomy.api.application.usecase.aviso.ExcluirAvisoUseCase;
 import com.condoeconomy.api.core.security.SecuritySanitizer;
 import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
 import com.condoeconomy.api.presentation.dto.aviso.CriarAvisoRequestDTO;
@@ -23,15 +24,25 @@ public class AvisoController {
 
     private final CriarAvisoUseCase criarAvisoUseCase;
     private final ListarAvisosUseCase listarAvisosUseCase;
+    private final ExcluirAvisoUseCase excluirAvisoUseCase;
 
-    public AvisoController(CriarAvisoUseCase criarAvisoUseCase, ListarAvisosUseCase listarAvisosUseCase) {
+    public AvisoController(CriarAvisoUseCase criarAvisoUseCase, ListarAvisosUseCase listarAvisosUseCase, ExcluirAvisoUseCase excluirAvisoUseCase) {
         this.criarAvisoUseCase = criarAvisoUseCase;
         this.listarAvisosUseCase = listarAvisosUseCase;
+        this.excluirAvisoUseCase = excluirAvisoUseCase;
     }
 
     @GetMapping
     public ResponseEntity<List<AvisoResponseDTO>> listar() {
         return ResponseEntity.ok(listarAvisosUseCase.execute());
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_SINDICO', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<Void> excluir(@PathVariable String id) {
+        excluirAvisoUseCase.execute(id);
+        log.info("[AUDITORIA DE COMUNICAÇÃO] Aviso '{}' excluído", id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping
