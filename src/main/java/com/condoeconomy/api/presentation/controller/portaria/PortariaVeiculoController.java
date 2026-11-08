@@ -30,17 +30,25 @@ public class PortariaVeiculoController {
     private SpringDataUsuarioRepository usuarioRepository;
 
     @GetMapping("/consulta")
-    public ResponseEntity<List<VeiculoConsultaDTO>> consultarVeiculo(@RequestParam String placa) {
-        SecuritySanitizer.validarTextoSeguro(placa, "placa");
-        String placaSanitizada = SecuritySanitizer.sanitizar(placa);
+    public ResponseEntity<List<VeiculoConsultaDTO>> consultarVeiculo(@RequestParam(required = false, defaultValue = "") String placa) {
+        List<VeiculoJpaEntity> veiculos;
+        if (placa == null || placa.isBlank()) {
+            veiculos = veiculoRepository.findAll();
+        } else {
+            SecuritySanitizer.validarTextoSeguro(placa, "placa");
+            String placaSanitizada = SecuritySanitizer.sanitizar(placa);
 
-        // Permite buscar digitando a placa com ou sem traço
-        String busca = placaSanitizada;
-        if (placaSanitizada.length() == 7 && !placaSanitizada.contains("-")) {
-            busca = placaSanitizada.substring(0, 3) + "-" + placaSanitizada.substring(3);
+            // Permite buscar digitando a placa com ou sem traço
+            String busca = placaSanitizada;
+            if (placaSanitizada.length() == 7 && !placaSanitizada.contains("-")) {
+                busca = placaSanitizada.substring(0, 3) + "-" + placaSanitizada.substring(3);
+            }
+
+            veiculos = veiculoRepository.findByPlacaContainingIgnoreCase(busca);
+            if (veiculos.isEmpty() && !busca.equalsIgnoreCase(placaSanitizada)) {
+                veiculos = veiculoRepository.findByPlacaContainingIgnoreCase(placaSanitizada);
+            }
         }
-        
-        List<VeiculoJpaEntity> veiculos = veiculoRepository.findByPlacaContainingIgnoreCase(busca);
 
         List<VeiculoConsultaDTO> dtos = veiculos.stream().map(v -> {
             Optional<UsuarioJpaEntity> morador = usuarioRepository.findById(v.getUsuarioId());
