@@ -81,12 +81,8 @@ public class ReservaController {
             SecuritySanitizer.validarTextoSeguro(status, "status");
         }
         
-        List<com.condoeconomy.api.domain.entity.reserva.Reserva> reservas;
-        if (data == null && status == null) {
-            reservas = listarReservasUseCase.executar(LocalDate.now(), null);
-        } else {
-            reservas = listarReservasUseCase.executar(data, status != null ? SecuritySanitizer.sanitizar(status) : null);
-        }
+        List<com.condoeconomy.api.domain.entity.reserva.Reserva> reservas =
+                listarReservasUseCase.executar(data, status != null ? SecuritySanitizer.sanitizar(status) : null);
 
         var dtos = reservas.stream().map(ReservaResponseDTO::fromEntity).collect(Collectors.toList());
         return ResponseEntity.ok(dtos);

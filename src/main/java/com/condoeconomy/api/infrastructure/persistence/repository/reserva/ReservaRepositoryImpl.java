@@ -62,6 +62,11 @@ public class ReservaRepositoryImpl implements ReservaRepository {
     }
 
     @Override
+    public List<Reserva> buscarTodas() {
+        return reservaDb.findAll().stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public List<AreaComum> buscarAreasComuns() {
         return areaComumDb.findAll().stream().map(this::toDomainArea).collect(Collectors.toList());
     }

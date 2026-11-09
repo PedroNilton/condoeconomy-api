@@ -23,6 +23,6 @@ public class ListarReservasUseCase {
         } else if (status != null) {
             return reservaRepository.buscarPorStatus(status);
         }
-        throw new IllegalArgumentException("Forneça data ou status para buscar reservas");
+        return reservaRepository.buscarTodas();
     }
 }

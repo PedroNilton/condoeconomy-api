@@ -18,4 +18,5 @@ public interface ReservaRepository {
     List<AreaComum> buscarAreasComuns();
     Optional<AreaComum> buscarAreaComumPorId(UUID id);
     boolean existeReservaNoPeriodo(UUID areaComumId, LocalDate data);
+    List<Reserva> buscarTodas();
 }
