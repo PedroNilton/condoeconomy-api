@@ -22,7 +22,11 @@ public class CriarAvisoUseCase {
             data.titulo(),
             data.mensagem(),
             LocalDateTime.now(),
-            data.autor()
+            data.autor(),
+            data.categoria(),
+            data.blocos(),
+            Boolean.TRUE.equals(data.fixado()),
+            0
         );
         repository.save(aviso);
         return new AvisoResponseDTO(
@@ -30,7 +34,11 @@ public class CriarAvisoUseCase {
             aviso.getTitulo(),
             aviso.getMensagem(),
             aviso.getDataCriacao(),
-            aviso.getAutor()
+            aviso.getAutor(),
+            aviso.getCategoria(),
+            aviso.getBlocos(),
+            aviso.isFixado(),
+            aviso.getVisualizacoes()
         );
     }
 }

@@ -7,5 +7,9 @@ public record AvisoResponseDTO(
     String titulo,
     String mensagem,
     LocalDateTime dataCriacao,
-    String autor
+    String autor,
+    String categoria,
+    String blocos,
+    boolean fixado,
+    int visualizacoes
 ) {}

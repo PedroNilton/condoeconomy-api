@@ -19,6 +19,21 @@ public class AprovarRejeitarReservaUseCase {
     public void aprovar(UUID reservaId) {
         Reserva reserva = repository.buscarPorId(reservaId)
             .orElseThrow(() -> new RuntimeException("Reserva não encontrada"));
+
+        boolean conflito = repository.buscarPorDataEStatus(
+                reserva.getDataReserva(),
+                Reserva.StatusReserva.APROVADA.name()
+        ).stream().anyMatch(outra ->
+                !outra.getId().equals(reserva.getId())
+                && outra.getAreaComum().getId().equals(reserva.getAreaComum().getId())
+                && outra.getHoraInicio().isBefore(reserva.getHoraFim())
+                && reserva.getHoraInicio().isBefore(outra.getHoraFim())
+        );
+
+        if (conflito) {
+            throw new IllegalStateException("Já existe uma reserva aprovada para esta área comum no mesmo dia e horário.");
+        }
+
         reserva.aprovar();
         repository.salvar(reserva);
         notificationService.notifyReservasUpdate();

@@ -217,12 +217,16 @@ public class PerfilController {
         SecuritySanitizer.validarTextoSeguro(dto.placa(), "placa");
         SecuritySanitizer.validarTextoSeguro(dto.modelo(), "modelo");
         SecuritySanitizer.validarTextoSeguro(dto.cor(), "cor");
+        if (dto.vaga() != null && !dto.vaga().isBlank()) {
+            SecuritySanitizer.validarTextoSeguro(dto.vaga(), "vaga");
+        }
 
         VeiculoJpaEntity veiculo = new VeiculoJpaEntity();
         veiculo.setUsuarioId(getLoggedUserId(auth));
         veiculo.setPlaca(SecuritySanitizer.sanitizar(dto.placa()).toUpperCase());
         veiculo.setModelo(SecuritySanitizer.sanitizar(dto.modelo()));
         veiculo.setCor(SecuritySanitizer.sanitizar(dto.cor()));
+        veiculo.setVaga(dto.vaga() != null && !dto.vaga().isBlank() ? SecuritySanitizer.sanitizar(dto.vaga()) : null);
         return ResponseEntity.ok(veiculoRepository.save(veiculo));
     }
 
@@ -250,12 +254,20 @@ public class PerfilController {
         SecuritySanitizer.validarTextoSeguro(dto.nome(), "nome");
         SecuritySanitizer.validarTextoSeguro(dto.especie(), "especie");
         SecuritySanitizer.validarTextoSeguro(dto.raca(), "raca");
+        if (dto.cor() != null && !dto.cor().isBlank()) {
+            SecuritySanitizer.validarTextoSeguro(dto.cor(), "cor");
+        }
+        if (dto.fotoUrl() != null && !dto.fotoUrl().isBlank()) {
+            SecuritySanitizer.validarUrlFotoSegura(dto.fotoUrl());
+        }
 
         PetJpaEntity pet = new PetJpaEntity();
         pet.setUsuarioId(getLoggedUserId(auth));
         pet.setNome(SecuritySanitizer.sanitizar(dto.nome()));
         pet.setEspecie(SecuritySanitizer.sanitizar(dto.especie()));
         pet.setRaca(dto.raca() != null ? SecuritySanitizer.sanitizar(dto.raca()) : null);
+        pet.setCor(dto.cor() != null && !dto.cor().isBlank() ? SecuritySanitizer.sanitizar(dto.cor()) : null);
+        pet.setFotoUrl(dto.fotoUrl() != null && !dto.fotoUrl().isBlank() ? dto.fotoUrl().trim() : null);
         return ResponseEntity.ok(petRepository.save(pet));
     }
 

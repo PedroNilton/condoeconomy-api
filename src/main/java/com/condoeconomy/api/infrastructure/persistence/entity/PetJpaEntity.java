@@ -28,6 +28,10 @@ public class PetJpaEntity {
     private String nome;
     private String especie;
     private String raca;
+    private String cor;
+
+    @Column(name = "foto_url")
+    private String fotoUrl;
 
     @JsonIgnore
     @Column(name = "deleted_at")

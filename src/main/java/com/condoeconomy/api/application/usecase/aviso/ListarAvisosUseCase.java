@@ -15,13 +15,17 @@ public class ListarAvisosUseCase {
     }
 
     public List<AvisoResponseDTO> execute() {
-        return repository.findAllByOrderByDataCriacaoDesc().stream()
+        return repository.findAllByOrderByFixadoDescDataCriacaoDesc().stream()
             .map(a -> new AvisoResponseDTO(
                 a.getId(),
                 a.getTitulo(),
                 a.getMensagem(),
                 a.getDataCriacao(),
-                a.getAutor()
+                a.getAutor(),
+                a.getCategoria(),
+                a.getBlocos(),
+                a.isFixado(),
+                a.getVisualizacoes()
             ))
             .collect(Collectors.toList());
     }

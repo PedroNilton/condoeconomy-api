@@ -32,7 +32,7 @@ public class NotificacaoController {
         UsuarioJpaEntity usuario = getUsuarioAutenticado();
         List<NotificacaoResponseDTO> lista = repository.findByUsuarioIdOrderByDataCriacaoDesc(usuario.getId())
             .stream()
-            .map(n -> new NotificacaoResponseDTO(n.getId(), n.getTitulo(), n.getMensagem(), n.isLida(), n.getDataCriacao()))
+            .map(n -> new NotificacaoResponseDTO(n.getId(), n.getTitulo(), n.getMensagem(), n.isLida(), n.getDataCriacao(), n.getCategoria()))
             .collect(Collectors.toList());
         return ResponseEntity.ok(lista);
     }
@@ -41,6 +41,13 @@ public class NotificacaoController {
     public ResponseEntity<Long> contarNaoLidas() {
         UsuarioJpaEntity usuario = getUsuarioAutenticado();
         return ResponseEntity.ok(repository.countByUsuarioIdAndLidaFalse(usuario.getId()));
+    }
+
+    @PutMapping("/todas-lidas")
+    public ResponseEntity<Void> marcarTodasComoLidas() {
+        UsuarioJpaEntity usuario = getUsuarioAutenticado();
+        repository.marcarTodasComoLidasPorUsuario(usuario.getId());
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping("/{id}/lida")

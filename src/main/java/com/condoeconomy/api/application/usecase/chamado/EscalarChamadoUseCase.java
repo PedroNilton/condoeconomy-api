@@ -17,9 +17,13 @@ public class EscalarChamadoUseCase {
     }
 
     public void execute(UUID chamadoId) {
+        execute(chamadoId, null);
+    }
+
+    public void execute(UUID chamadoId, String notaPortaria) {
         Chamado chamado = repository.buscarPorId(chamadoId)
             .orElseThrow(() -> new RuntimeException("Chamado não encontrado"));
-        chamado.escalarParaSindico();
+        chamado.escalarParaSindico(notaPortaria);
         repository.salvar(chamado);
         notificationService.notifyChamadosUpdate();
     }

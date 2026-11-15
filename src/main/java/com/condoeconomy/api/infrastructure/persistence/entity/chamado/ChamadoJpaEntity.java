@@ -28,4 +28,6 @@ public class ChamadoJpaEntity {
     private LocalDateTime dataResolucao;
     private boolean escaladoSindico;
     private String fotoAnexo;
+    @jakarta.persistence.Column(name = "nota_portaria")
+    private String notaPortaria;
 }

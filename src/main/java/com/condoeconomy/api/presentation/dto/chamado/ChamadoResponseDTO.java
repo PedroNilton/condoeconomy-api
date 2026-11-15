@@ -15,14 +15,15 @@ public record ChamadoResponseDTO(
     LocalDateTime dataAbertura,
     LocalDateTime dataResolucao,
     boolean escaladoSindico,
-    String fotoAnexo
+    String fotoAnexo,
+    String notaPortaria
 ) {
     public static ChamadoResponseDTO fromEntity(Chamado c) {
         return new ChamadoResponseDTO(
             c.getId(), c.getUnidadeTexto(), c.getMoradorSolicitante(), 
             c.getCategoria().name(), c.getAssunto(), c.getDescricao(), 
             c.getStatus().name(), c.getDataAbertura(), c.getDataResolucao(),
-            c.isEscaladoSindico(), c.getFotoAnexo()
+            c.isEscaladoSindico(), c.getFotoAnexo(), c.getNotaPortaria()
         );
     }
 }

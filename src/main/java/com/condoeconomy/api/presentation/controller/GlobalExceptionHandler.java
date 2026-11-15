@@ -81,4 +81,15 @@ public class GlobalExceptionHandler {
         problemDetail.setType(URI.create("https://condoeconomy.com/erros/bad-request"));
         return problemDetail;
     }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ProblemDetail handleIllegalStateException(IllegalStateException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                ex.getMessage()
+        );
+        problemDetail.setTitle("Conflito de Regra de Negócio");
+        problemDetail.setType(URI.create("https://condoeconomy.com/erros/conflict"));
+        return problemDetail;
+    }
 }

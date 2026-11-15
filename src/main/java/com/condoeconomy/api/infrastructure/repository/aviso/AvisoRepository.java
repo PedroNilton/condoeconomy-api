@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface AvisoRepository extends JpaRepository<Aviso, String> {
     List<Aviso> findAllByOrderByDataCriacaoDesc();
+    List<Aviso> findAllByOrderByFixadoDescDataCriacaoDesc();
 }

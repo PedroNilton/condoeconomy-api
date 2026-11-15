@@ -28,6 +28,7 @@ public class VeiculoJpaEntity {
     private String placa;
     private String modelo;
     private String cor;
+    private String vaga;
 
     @JsonIgnore
     @Column(name = "deleted_at")

@@ -16,16 +16,22 @@ public class Notificacao {
     private LocalDateTime dataCriacao;
     @Column(name = "usuario_id")
     private UUID usuarioId;
+    private String categoria = "GERAL";
 
     public Notificacao() {}
 
     public Notificacao(UUID id, String titulo, String mensagem, UUID usuarioId) {
+        this(id, titulo, mensagem, usuarioId, "GERAL");
+    }
+
+    public Notificacao(UUID id, String titulo, String mensagem, UUID usuarioId, String categoria) {
         this.id = id;
         this.titulo = titulo;
         this.mensagem = mensagem;
         this.lida = false;
         this.dataCriacao = LocalDateTime.now();
         this.usuarioId = usuarioId;
+        this.categoria = (categoria != null && !categoria.isBlank()) ? categoria : "GERAL";
     }
 
     public UUID getId() { return id; }
@@ -34,6 +40,7 @@ public class Notificacao {
     public boolean isLida() { return lida; }
     public LocalDateTime getDataCriacao() { return dataCriacao; }
     public UUID getUsuarioId() { return usuarioId; }
+    public String getCategoria() { return categoria != null ? categoria : "GERAL"; }
 
     public void marcarComoLida() {
         this.lida = true;

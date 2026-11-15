@@ -15,6 +15,7 @@ public class Chamado {
     private LocalDateTime dataResolucao;
     private boolean escaladoSindico;
     private String fotoAnexo;
+    private String notaPortaria;
 
     public enum StatusChamado { ABERTO, EM_ANDAMENTO, RESOLVIDO }
     public enum CategoriaChamado { RECLAMACAO, SUGESTAO, MANUTENCAO, OUTROS }
@@ -24,12 +25,18 @@ public class Chamado {
     public Chamado(UUID id, String unidadeTexto, String moradorSolicitante, CategoriaChamado categoria, 
                    String assunto, String descricao, StatusChamado status, 
                    LocalDateTime dataAbertura, LocalDateTime dataResolucao, boolean escaladoSindico) {
-        this(id, unidadeTexto, moradorSolicitante, categoria, assunto, descricao, status, dataAbertura, dataResolucao, escaladoSindico, null);
+        this(id, unidadeTexto, moradorSolicitante, categoria, assunto, descricao, status, dataAbertura, dataResolucao, escaladoSindico, null, null);
     }
 
     public Chamado(UUID id, String unidadeTexto, String moradorSolicitante, CategoriaChamado categoria, 
                    String assunto, String descricao, StatusChamado status, 
                    LocalDateTime dataAbertura, LocalDateTime dataResolucao, boolean escaladoSindico, String fotoAnexo) {
+        this(id, unidadeTexto, moradorSolicitante, categoria, assunto, descricao, status, dataAbertura, dataResolucao, escaladoSindico, fotoAnexo, null);
+    }
+
+    public Chamado(UUID id, String unidadeTexto, String moradorSolicitante, CategoriaChamado categoria, 
+                   String assunto, String descricao, StatusChamado status, 
+                   LocalDateTime dataAbertura, LocalDateTime dataResolucao, boolean escaladoSindico, String fotoAnexo, String notaPortaria) {
         this.id = id;
         this.unidadeTexto = unidadeTexto;
         this.moradorSolicitante = moradorSolicitante;
@@ -41,6 +48,7 @@ public class Chamado {
         this.dataResolucao = dataResolucao;
         this.escaladoSindico = escaladoSindico;
         this.fotoAnexo = fotoAnexo;
+        this.notaPortaria = notaPortaria;
     }
 
     public static Chamado abrir(String unidadeTexto, String moradorSolicitante, 
@@ -51,7 +59,7 @@ public class Chamado {
     public static Chamado abrir(String unidadeTexto, String moradorSolicitante, 
                                 CategoriaChamado categoria, String assunto, String descricao, String fotoAnexo) {
         return new Chamado(UUID.randomUUID(), unidadeTexto, moradorSolicitante, categoria, 
-                           assunto, descricao, StatusChamado.ABERTO, LocalDateTime.now(), null, false, fotoAnexo);
+                           assunto, descricao, StatusChamado.ABERTO, LocalDateTime.now(), null, false, fotoAnexo, null);
     }
 
     public void iniciarAtendimento() {
@@ -67,7 +75,14 @@ public class Chamado {
     }
 
     public void escalarParaSindico() {
+        escalarParaSindico(null);
+    }
+
+    public void escalarParaSindico(String notaPortaria) {
         this.escaladoSindico = true;
+        if (notaPortaria != null && !notaPortaria.isBlank()) {
+            this.notaPortaria = notaPortaria;
+        }
     }
 
     // Getters
@@ -82,4 +97,5 @@ public class Chamado {
     public LocalDateTime getDataResolucao() { return dataResolucao; }
     public boolean isEscaladoSindico() { return escaladoSindico; }
     public String getFotoAnexo() { return fotoAnexo; }
+    public String getNotaPortaria() { return notaPortaria; }
 }
