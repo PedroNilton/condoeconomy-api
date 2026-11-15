@@ -58,6 +58,7 @@ public class PortariaVeiculoController {
                     .placa(v.getPlaca())
                     .modelo(v.getModelo())
                     .cor(v.getCor())
+                    .vaga(v.getVaga())
                     .moradorId(v.getUsuarioId())
                     .nomeMorador(morador.map(UsuarioJpaEntity::getNome).orElse("Desconhecido"))
                     .apartamento(morador.map(UsuarioJpaEntity::getApartamento).orElse(""))

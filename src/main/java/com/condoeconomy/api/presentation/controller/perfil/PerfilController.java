@@ -253,7 +253,9 @@ public class PerfilController {
     public ResponseEntity<PetJpaEntity> addPet(Authentication auth, @RequestBody @Valid AdicionarPetRequestDTO dto) {
         SecuritySanitizer.validarTextoSeguro(dto.nome(), "nome");
         SecuritySanitizer.validarTextoSeguro(dto.especie(), "especie");
-        SecuritySanitizer.validarTextoSeguro(dto.raca(), "raca");
+        if (dto.raca() != null && !dto.raca().isBlank()) {
+            SecuritySanitizer.validarTextoSeguro(dto.raca(), "raca");
+        }
         if (dto.cor() != null && !dto.cor().isBlank()) {
             SecuritySanitizer.validarTextoSeguro(dto.cor(), "cor");
         }
@@ -265,7 +267,7 @@ public class PerfilController {
         pet.setUsuarioId(getLoggedUserId(auth));
         pet.setNome(SecuritySanitizer.sanitizar(dto.nome()));
         pet.setEspecie(SecuritySanitizer.sanitizar(dto.especie()));
-        pet.setRaca(dto.raca() != null ? SecuritySanitizer.sanitizar(dto.raca()) : null);
+        pet.setRaca(dto.raca() != null && !dto.raca().isBlank() ? SecuritySanitizer.sanitizar(dto.raca()) : null);
         pet.setCor(dto.cor() != null && !dto.cor().isBlank() ? SecuritySanitizer.sanitizar(dto.cor()) : null);
         pet.setFotoUrl(dto.fotoUrl() != null && !dto.fotoUrl().isBlank() ? dto.fotoUrl().trim() : null);
         return ResponseEntity.ok(petRepository.save(pet));
@@ -294,11 +296,16 @@ public class PerfilController {
     public ResponseEntity<MoradorAdicionalJpaEntity> addMorador(Authentication auth, @RequestBody @Valid AdicionarMoradorRequestDTO dto) {
         SecuritySanitizer.validarTextoSeguro(dto.nome(), "nome");
         SecuritySanitizer.validarTextoSeguro(dto.parentesco(), "parentesco");
+        if (dto.email() != null && !dto.email().isBlank()) {
+            SecuritySanitizer.validarTextoSeguro(dto.email(), "email");
+        }
 
         MoradorAdicionalJpaEntity morador = new MoradorAdicionalJpaEntity();
         morador.setUsuarioId(getLoggedUserId(auth));
         morador.setNome(SecuritySanitizer.sanitizar(dto.nome()));
         morador.setParentesco(SecuritySanitizer.sanitizar(dto.parentesco()));
+        morador.setEmail(dto.email() != null && !dto.email().isBlank() ? SecuritySanitizer.sanitizar(dto.email()) : null);
+        morador.setAcessoApp(Boolean.TRUE.equals(dto.acessoApp()));
         return ResponseEntity.ok(moradorAdicionalRepository.save(morador));
     }
 

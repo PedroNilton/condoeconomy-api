@@ -27,6 +27,10 @@ public class MoradorAdicionalJpaEntity {
 
     private String nome;
     private String parentesco;
+    private String email;
+
+    @Column(name = "acesso_app", nullable = false)
+    private boolean acessoApp = false;
 
     @JsonIgnore
     @Column(name = "deleted_at")

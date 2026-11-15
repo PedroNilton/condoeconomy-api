@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 public record AdicionarPetRequestDTO(
         @NotBlank @Size(max = 50) String nome,
         @NotBlank @Size(max = 30) String especie,
-        @NotBlank @Size(max = 50) String raca,
+        @Size(max = 50) String raca,
         @Size(max = 40) String cor,
         String fotoUrl
 ) {

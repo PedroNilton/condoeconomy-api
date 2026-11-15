@@ -16,6 +16,7 @@ public class VeiculoConsultaDTO {
     private String placa;
     private String modelo;
     private String cor;
+    private String vaga;
     
     // Dados do morador
     private UUID moradorId;

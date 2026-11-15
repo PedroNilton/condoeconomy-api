@@ -27,8 +27,17 @@ public class CriarReservaUseCase {
     public Reserva executar(UUID areaComumId, String unidade, String morador, String titulo, 
                             LocalDate data, LocalTime inicio, LocalTime fim, List<ConvidadoDtoInput> convidadosInput) {
         
-        if (reservaRepository.existeReservaNoPeriodo(areaComumId, data)) {
-            throw new IllegalArgumentException("Já existe uma reserva para esta área comum nesta data.");
+        boolean conflitoHorario = reservaRepository.buscarPorDataEStatus(
+                data,
+                Reserva.StatusReserva.APROVADA.name()
+        ).stream().anyMatch(outra ->
+                outra.getAreaComum().getId().equals(areaComumId)
+                && outra.getHoraInicio().isBefore(fim)
+                && inicio.isBefore(outra.getHoraFim())
+        );
+
+        if (conflitoHorario) {
+            throw new IllegalArgumentException("Já existe uma reserva aprovada para esta área comum neste mesmo dia e horário.");
         }
 
         AreaComum area = reservaRepository.buscarAreaComumPorId(areaComumId)

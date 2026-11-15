@@ -18,7 +18,7 @@ public class Chamado {
     private String notaPortaria;
 
     public enum StatusChamado { ABERTO, EM_ANDAMENTO, RESOLVIDO }
-    public enum CategoriaChamado { RECLAMACAO, SUGESTAO, MANUTENCAO, OUTROS }
+    public enum CategoriaChamado { RECLAMACAO, SUGESTAO, MANUTENCAO, DUVIDA, SEGURANCA, ELOGIO, OUTROS }
 
     public Chamado() {} // Hibernate
 
@@ -63,10 +63,8 @@ public class Chamado {
     }
 
     public void iniciarAtendimento() {
-        if (this.status == StatusChamado.RESOLVIDO) {
-            throw new IllegalStateException("Chamado já está resolvido");
-        }
         this.status = StatusChamado.EM_ANDAMENTO;
+        this.dataResolucao = null;
     }
 
     public void resolver() {
