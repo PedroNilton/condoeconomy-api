@@ -30,4 +30,13 @@ public class ChamadoJpaEntity {
     private String fotoAnexo;
     @jakarta.persistence.Column(name = "nota_portaria")
     private String notaPortaria;
+    @jakarta.persistence.Column(name = "usuario_id")
+    private UUID usuarioId;
+
+    public ChamadoJpaEntity(UUID id, String unidadeTexto, String moradorSolicitante, String categoria,
+                            String assunto, String descricao, String status, LocalDateTime dataAbertura,
+                            LocalDateTime dataResolucao, boolean escaladoSindico, String fotoAnexo, String notaPortaria) {
+        this(id, unidadeTexto, moradorSolicitante, categoria, assunto, descricao, status, dataAbertura,
+                dataResolucao, escaladoSindico, fotoAnexo, notaPortaria, null);
+    }
 }

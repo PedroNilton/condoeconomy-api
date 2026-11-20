@@ -210,4 +210,42 @@ class NovosFluxosSegurancaTest {
         assertFalse(morador.isAtivo());
         assertEquals(2, morador.getTokenVersion(), "Bloquear usuário deve invalidar JWTs ativos via tokenVersion + 1");
     }
+
+    @Test
+    @DisplayName("Recuperação de Senha (Anti-Brute-Force): revoga código OTP após 5 tentativas falhas consecutivas")
+    void deveRevogarOtpAutomaticamenteAposCincoTentativasIncorretas() {
+        UsuarioJpaEntity morador = new UsuarioJpaEntity();
+        morador.setId(UUID.randomUUID());
+        morador.setEmail("carlos@email.com");
+        morador.setAtivo(true);
+
+        String codigoReal = "987654";
+        String hashReal = PasswordRecoveryService.gerarHashSha256("carlos@email.com", codigoReal);
+        TokenRecuperacaoSenhaJpaEntity tokenAtivo = new TokenRecuperacaoSenhaJpaEntity(
+                UUID.randomUUID(),
+                morador.getId(),
+                hashReal,
+                LocalDateTime.now().plusMinutes(15),
+                false,
+                "127.0.0.1",
+                LocalDateTime.now()
+        );
+
+        when(usuarioRepository.findByEmailIgnoreCase("carlos@email.com")).thenReturn(Optional.of(morador));
+        when(tokenRepository.findFirstByUsuarioIdAndTokenHashAndUsadoFalseOrderByCriadoEmDesc(eq(morador.getId()), any()))
+                .thenReturn(Optional.empty());
+        when(tokenRepository.findFirstByUsuarioIdAndUsadoFalseOrderByCriadoEmDesc(morador.getId()))
+                .thenReturn(Optional.of(tokenAtivo));
+
+        for (int i = 1; i <= 5; i++) {
+            int tentativa = i;
+            assertThrows(IllegalArgumentException.class, () ->
+                    passwordRecoveryService.redefinirSenha("carlos@email.com", "00000" + tentativa, "NovaSenhaForte99", "10.0.0." + tentativa)
+            );
+        }
+
+        assertEquals(5, tokenAtivo.getTentativasFalhas());
+        assertTrue(tokenAtivo.isUsado(), "Após 5 tentativas incorretas (mesmo rotacionando IPs), o token OTP deve ser revogado");
+        verify(auditService).registrarUsuario(eq(morador), eq("OTP_REVOGADO_FORCA_BRUTA"), eq("CRITICO"), any(), any());
+    }
 }

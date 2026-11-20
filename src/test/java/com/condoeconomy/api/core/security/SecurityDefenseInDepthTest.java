@@ -232,4 +232,28 @@ class SecurityDefenseInDepthTest {
         assertNull(SecurityContextHolder.getContext().getAuthentication(),
                 "Token com tokenVersion anterior ao atual não deve autenticar o usuário");
     }
+
+    @Test
+    @DisplayName("Camada 1 (Anti-Botnet): Deve bloquear conta alvo após 10 falhas distribuídas em IPs diferentes")
+    void deveBloquearContaContraAtaqueDistribuidoComRotacaoDeIps() {
+        LoginAttemptService service = new LoginAttemptService();
+        String email = "sindico@condominio.com";
+
+        for (int i = 1; i <= 10; i++) {
+            service.registrarFalha(email, "198.51.100." + i);
+        }
+
+        assertTrue(service.estaBloqueado(email, "203.0.113.99"),
+                "Mesmo vindo de um 11º IP inédito, a conta deve estar protegida pelo bloqueio global por e-mail");
+    }
+
+    @Test
+    @DisplayName("Camada 5 (Prod Guard): Deve impedir boot no profile 'prod' caso JWT_SECRET seja a chave padrão dev-only")
+    void deveImpedirInicializacaoEmProducaoComSecretDefaultDeDesenvolvimento() {
+        TokenService prodTokenService = new TokenService();
+        ReflectionTestUtils.setField(prodTokenService, "secret", "condoeconomy-secret-key-123-dev-only-do-not-use-in-prod");
+        ReflectionTestUtils.setField(prodTokenService, "activeProfile", "prod");
+
+        assertThrows(IllegalStateException.class, prodTokenService::validarSecret);
+    }
 }

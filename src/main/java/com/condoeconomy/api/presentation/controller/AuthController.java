@@ -40,17 +40,29 @@ public class AuthController {
     private final LoginAttemptService loginAttemptService;
     private final SecurityAuditService auditService;
     private final PasswordRecoveryService passwordRecoveryService;
+    private final com.condoeconomy.api.infrastructure.persistence.repository.SpringDataUsuarioRepository usuarioRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AuthController(AuthenticationManager authenticationManager,
+                          TokenService tokenService,
+                          LoginAttemptService loginAttemptService,
+                          SecurityAuditService auditService,
+                          PasswordRecoveryService passwordRecoveryService,
+                          com.condoeconomy.api.infrastructure.persistence.repository.SpringDataUsuarioRepository usuarioRepository) {
+        this.authenticationManager = authenticationManager;
+        this.tokenService = tokenService;
+        this.loginAttemptService = loginAttemptService;
+        this.auditService = auditService;
+        this.passwordRecoveryService = passwordRecoveryService;
+        this.usuarioRepository = usuarioRepository;
+    }
 
     public AuthController(AuthenticationManager authenticationManager,
                           TokenService tokenService,
                           LoginAttemptService loginAttemptService,
                           SecurityAuditService auditService,
                           PasswordRecoveryService passwordRecoveryService) {
-        this.authenticationManager = authenticationManager;
-        this.tokenService = tokenService;
-        this.loginAttemptService = loginAttemptService;
-        this.auditService = auditService;
-        this.passwordRecoveryService = passwordRecoveryService;
+        this(authenticationManager, tokenService, loginAttemptService, auditService, passwordRecoveryService, null);
     }
 
     public record LoginRequestDTO(
@@ -202,9 +214,16 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout(HttpServletRequest request) {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UsuarioJpaEntity usuario && usuarioRepository != null) {
+            usuario.setTokenVersion(usuario.getTokenVersion() + 1);
+            usuarioRepository.save(usuario);
+            auditService.registrarUsuario(usuario, "LOGOUT_SUCESSO", "INFO", request.getRemoteAddr(),
+                    "Logout executado com revogação imediata do JWT no servidor (tokenVersion=" + usuario.getTokenVersion() + ").");
+        }
         ResponseCookie clearCookie = criarCookieSessao("", request.isSecure(), Duration.ZERO);
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
-                .body(Map.of("message", "Sessão encerrada e cookie HttpOnly removido com sucesso."));
+                .body(Map.of("message", "Sessão encerrada e token revogado com sucesso."));
     }
 }

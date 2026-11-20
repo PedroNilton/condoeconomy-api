@@ -38,6 +38,7 @@ public class PasswordRecoveryService {
 
     private static final Logger log = LoggerFactory.getLogger(PasswordRecoveryService.class);
     private static final int EXPIRACAO_MINUTOS = 15;
+    static final int MAX_TENTATIVAS_OTP = 5;
 
     private final SpringDataUsuarioRepository usuarioRepository;
     private final SpringDataTokenRecuperacaoSenhaRepository tokenRepository;
@@ -148,6 +149,17 @@ public class PasswordRecoveryService {
                 .findFirstByUsuarioIdAndTokenHashAndUsadoFalseOrderByCriadoEmDesc(usuario.getId(), tokenHash);
 
         if (optToken.isEmpty()) {
+            tokenRepository.findFirstByUsuarioIdAndUsadoFalseOrderByCriadoEmDesc(usuario.getId())
+                    .ifPresent(tokenAtivo -> {
+                        int novasFalhas = tokenAtivo.getTentativasFalhas() + 1;
+                        tokenAtivo.setTentativasFalhas(novasFalhas);
+                        if (novasFalhas >= MAX_TENTATIVAS_OTP) {
+                            tokenAtivo.setUsado(true);
+                            auditService.registrarUsuario(usuario, "OTP_REVOGADO_FORCA_BRUTA", "CRITICO", ip,
+                                    "Código OTP invalidado automaticamente após " + novasFalhas + " tentativas incorretas.");
+                        }
+                        tokenRepository.save(tokenAtivo);
+                    });
             auditService.registrarUsuario(usuario, "FALHA_REDEFINICAO_SENHA", "ALERTA", ip,
                     "Tentativa de redefinição com código incorreto ou já utilizado.");
             throw new IllegalArgumentException("Código de verificação inválido ou expirado.");

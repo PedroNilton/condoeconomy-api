@@ -72,13 +72,21 @@ public final class SecuritySanitizer {
         return limpo.trim();
     }
 
+    // Limite máximo de ~2 MB para imagens codificadas em Base64 (evita DoS de memória/banco)
+    private static final int MAX_DATA_IMAGE_LENGTH = 2_800_000;
+
     /**
-     * Valida se uma URL de foto ou Data URI (Base64) é segura (apenas http/https ou data:image/jpeg|png|webp).
+     * Valida se uma URL de foto ou Data URI (Base64) é segura (apenas http/https ou data:image/jpeg|png|webp)
+     * e respeita o limite máximo de payload.
      * Bloqueia vetores XSS como javascript:, vbscript:, data:text/html ou data:image/svg+xml.
      */
     public static void validarUrlFotoSegura(String foto) {
         if (foto == null || foto.isBlank()) {
             return;
+        }
+        if (foto.length() > MAX_DATA_IMAGE_LENGTH) {
+            log.warn("Tentativa de envio de imagem acima do limite máximo permitido ({} chars) bloqueada.", foto.length());
+            throw new IllegalArgumentException("A imagem enviada excede o tamanho máximo permitido de 2 MB.");
         }
         String trimmed = foto.trim().toLowerCase();
         boolean isDataImageSegura = trimmed.startsWith("data:image/jpeg;base64,")

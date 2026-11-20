@@ -18,6 +18,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class LoginAttemptService {
 
     static final int MAX_TENTATIVAS = 5;
+    static final int MAX_TENTATIVAS_CONTA_GLOBAL = 10;
+    static final int MAX_CACHE_ENTRIES = 10_000;
     static final Duration JANELA = Duration.ofMinutes(15);
 
     private record Tentativas(int falhas, Instant primeiraFalha) {}
@@ -28,20 +30,45 @@ public class LoginAttemptService {
         return (email == null ? "" : email.trim().toLowerCase(Locale.ROOT)) + "|" + ip;
     }
 
+    private String chaveConta(String email) {
+        return "ACCOUNT|" + (email == null ? "" : email.trim().toLowerCase(Locale.ROOT));
+    }
+
+    private void limparExpiradosSeCheio() {
+        if (cache.size() < MAX_CACHE_ENTRIES) {
+            return;
+        }
+        Instant agora = Instant.now();
+        cache.entrySet().removeIf(entry -> agora.isAfter(entry.getValue().primeiraFalha().plus(JANELA)));
+    }
+
     public boolean estaBloqueado(String email, String ip) {
-        Tentativas t = cache.get(chave(email, ip));
+        return verificarChaveBloqueada(chave(email, ip), MAX_TENTATIVAS)
+                || verificarChaveBloqueada(chaveConta(email), MAX_TENTATIVAS_CONTA_GLOBAL);
+    }
+
+    private boolean verificarChaveBloqueada(String key, int limite) {
+        Tentativas t = cache.get(key);
         if (t == null) return false;
         if (Instant.now().isAfter(t.primeiraFalha().plus(JANELA))) {
-            cache.remove(chave(email, ip));
+            cache.remove(key);
             return false;
         }
-        return t.falhas() >= MAX_TENTATIVAS;
+        return t.falhas() >= limite;
     }
 
     public void registrarFalha(String email, String ip) {
-        cache.compute(chave(email, ip), (k, atual) -> {
+        limparExpiradosSeCheio();
+        incrementarChave(chave(email, ip), JANELA);
+        if (email != null && !email.isBlank()) {
+            incrementarChave(chaveConta(email), JANELA);
+        }
+    }
+
+    private Tentativas incrementarChave(String key, Duration janela) {
+        return cache.compute(key, (k, atual) -> {
             Instant agora = Instant.now();
-            if (atual == null || agora.isAfter(atual.primeiraFalha().plus(JANELA))) {
+            if (atual == null || agora.isAfter(atual.primeiraFalha().plus(janela))) {
                 return new Tentativas(1, agora);
             }
             return new Tentativas(atual.falhas() + 1, atual.primeiraFalha());
@@ -50,6 +77,9 @@ public class LoginAttemptService {
 
     public void registrarSucesso(String email, String ip) {
         cache.remove(chave(email, ip));
+        if (email != null && !email.isBlank()) {
+            cache.remove(chaveConta(email));
+        }
     }
 
     /**
@@ -57,15 +87,9 @@ public class LoginAttemptService {
      * Limita a quantidade máxima de requisições por IP dentro de uma janela de 5 minutos.
      */
     public boolean verificarEContabilizarRequisicaoPublica(String ip, String recurso, int maxPorCincoMinutos) {
+        limparExpiradosSeCheio();
         String key = "PUBLIC_RATE|" + recurso + "|" + (ip == null ? "unknown" : ip);
-        Duration janelaPublica = Duration.ofMinutes(5);
-        Tentativas t = cache.compute(key, (k, atual) -> {
-            Instant agora = Instant.now();
-            if (atual == null || agora.isAfter(atual.primeiraFalha().plus(janelaPublica))) {
-                return new Tentativas(1, agora);
-            }
-            return new Tentativas(atual.falhas() + 1, atual.primeiraFalha());
-        });
+        Tentativas t = incrementarChave(key, Duration.ofMinutes(5));
         return t.falhas() <= maxPorCincoMinutos;
     }
 }

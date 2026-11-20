@@ -32,6 +32,15 @@ public class ChamadoRepositoryImpl implements ChamadoRepository {
     }
 
     @Override
+    public List<Chamado> buscarPorUsuario(UUID usuarioId, String moradorSolicitante) {
+        if (usuarioId == null) {
+            return buscarPorMorador(moradorSolicitante);
+        }
+        return db.findByUsuarioIdOrLegacyMorador(usuarioId, moradorSolicitante != null ? moradorSolicitante : "")
+                .stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public Optional<Chamado> buscarPorId(UUID id) {
         return db.findById(id).map(this::toDomain);
     }
@@ -44,12 +53,14 @@ public class ChamadoRepositoryImpl implements ChamadoRepository {
     private Chamado toDomain(ChamadoJpaEntity e) {
         return new Chamado(e.getId(), e.getUnidadeTexto(), e.getMoradorSolicitante(), 
                 Chamado.CategoriaChamado.valueOf(e.getCategoria()), e.getAssunto(), e.getDescricao(), 
-                Chamado.StatusChamado.valueOf(e.getStatus()), e.getDataAbertura(), e.getDataResolucao(), e.isEscaladoSindico(), e.getFotoAnexo(), e.getNotaPortaria());
+                Chamado.StatusChamado.valueOf(e.getStatus()), e.getDataAbertura(), e.getDataResolucao(),
+                e.isEscaladoSindico(), e.getFotoAnexo(), e.getNotaPortaria(), e.getUsuarioId());
     }
 
     private ChamadoJpaEntity toJpa(Chamado d) {
         return new ChamadoJpaEntity(d.getId(), d.getUnidadeTexto(), d.getMoradorSolicitante(), 
                 d.getCategoria().name(), d.getAssunto(), d.getDescricao(), 
-                d.getStatus().name(), d.getDataAbertura(), d.getDataResolucao(), d.isEscaladoSindico(), d.getFotoAnexo(), d.getNotaPortaria());
+                d.getStatus().name(), d.getDataAbertura(), d.getDataResolucao(),
+                d.isEscaladoSindico(), d.getFotoAnexo(), d.getNotaPortaria(), d.getUsuarioId());
     }
 }

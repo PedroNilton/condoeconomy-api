@@ -40,4 +40,13 @@ public class TokenRecuperacaoSenhaJpaEntity {
 
     @Column(name = "criado_em", nullable = false)
     private LocalDateTime criadoEm;
+
+    @Column(name = "tentativas_falhas", nullable = false)
+    private int tentativasFalhas = 0;
+
+    public TokenRecuperacaoSenhaJpaEntity(UUID id, UUID usuarioId, String tokenHash,
+                                          LocalDateTime expiraEm, boolean usado,
+                                          String ipSolicitante, LocalDateTime criadoEm) {
+        this(id, usuarioId, tokenHash, expiraEm, usado, ipSolicitante, criadoEm, 0);
+    }
 }

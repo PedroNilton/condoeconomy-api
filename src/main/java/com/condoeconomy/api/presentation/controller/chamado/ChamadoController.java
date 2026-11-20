@@ -71,7 +71,9 @@ public class ChamadoController {
     @GetMapping("/meus")
     public ResponseEntity<List<ChamadoResponseDTO>> listarMeusChamados(Authentication auth) {
         UsuarioJpaEntity user = (UsuarioJpaEntity) auth.getPrincipal();
-        var chamados = listarChamadosUseCase.executarPorMorador(user.getNome());
+        var chamados = user.getId() != null
+                ? listarChamadosUseCase.executarPorUsuario(user.getId(), user.getNome())
+                : listarChamadosUseCase.executarPorMorador(user.getNome());
         var dtos = chamados.stream().map(ChamadoResponseDTO::fromEntity).collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }
@@ -123,6 +125,12 @@ public class ChamadoController {
             SecuritySanitizer.sanitizar(request.descricao()),
             request.fotoAnexo() != null && !request.fotoAnexo().isBlank() ? request.fotoAnexo().trim() : null
         );
+        if (chamado != null && user.getId() != null && chamado.getUsuarioId() == null) {
+            chamado.vincularUsuario(user.getId());
+            if (chamadoRepository != null) {
+                chamado = chamadoRepository.salvar(chamado);
+            }
+        }
         return ResponseEntity.ok(ChamadoResponseDTO.fromEntity(chamado));
     }
 
@@ -212,6 +220,9 @@ public class ChamadoController {
                 || a.getAuthority().equals("ROLE_ADMIN")
                 || a.getAuthority().equals("ROLE_SUPER_ADMIN"));
         if (isStaff) return true;
+        if (chamado.getUsuarioId() != null) {
+            return user.getId() != null && chamado.getUsuarioId().equals(user.getId());
+        }
         return chamado.getMoradorSolicitante() != null
                 && user.getNome() != null
                 && chamado.getMoradorSolicitante().equalsIgnoreCase(user.getNome());

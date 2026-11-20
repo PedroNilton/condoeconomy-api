@@ -9,6 +9,9 @@ import java.util.UUID;
 public interface ChamadoRepository {
     List<Chamado> buscarTodos();
     List<Chamado> buscarPorMorador(String moradorSolicitante);
+    default List<Chamado> buscarPorUsuario(UUID usuarioId, String moradorSolicitante) {
+        return buscarPorMorador(moradorSolicitante);
+    }
     Optional<Chamado> buscarPorId(UUID id);
     Chamado salvar(Chamado chamado);
 }

@@ -21,4 +21,8 @@ public class ListarChamadosUseCase {
     public List<Chamado> executarPorMorador(String moradorSolicitante) {
         return chamadoRepository.buscarPorMorador(moradorSolicitante);
     }
+
+    public List<Chamado> executarPorUsuario(java.util.UUID usuarioId, String moradorSolicitante) {
+        return chamadoRepository.buscarPorUsuario(usuarioId, moradorSolicitante);
+    }
 }

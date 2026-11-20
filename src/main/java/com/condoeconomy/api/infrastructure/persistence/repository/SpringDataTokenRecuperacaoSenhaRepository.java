@@ -18,6 +18,10 @@ public interface SpringDataTokenRecuperacaoSenhaRepository extends JpaRepository
             String tokenHash
     );
 
+    Optional<TokenRecuperacaoSenhaJpaEntity> findFirstByUsuarioIdAndUsadoFalseOrderByCriadoEmDesc(
+            UUID usuarioId
+    );
+
     @Modifying
     @Query("UPDATE TokenRecuperacaoSenhaJpaEntity t SET t.usado = true WHERE t.usuarioId = :usuarioId AND t.usado = false")
     void invalidarTokensAnteriores(@Param("usuarioId") UUID usuarioId);

@@ -22,6 +22,10 @@ public class CriarChamadoUseCase {
     public Chamado executar(String unidadeTexto, String morador, String categoriaStr, String assunto, String descricao, String fotoAnexo) {
         Chamado.CategoriaChamado categoria = Chamado.CategoriaChamado.valueOf(categoriaStr.toUpperCase());
         Chamado chamado = Chamado.abrir(unidadeTexto, morador, categoria, assunto, descricao, fotoAnexo);
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity user && user.getId() != null) {
+            chamado.vincularUsuario(user.getId());
+        }
         Chamado salvo = chamadoRepository.salvar(chamado);
         notificationService.notifyChamadosUpdate();
         return salvo;

@@ -16,6 +16,7 @@ public class Chamado {
     private boolean escaladoSindico;
     private String fotoAnexo;
     private String notaPortaria;
+    private UUID usuarioId;
 
     public enum StatusChamado { ABERTO, EM_ANDAMENTO, RESOLVIDO }
     public enum CategoriaChamado { RECLAMACAO, SUGESTAO, MANUTENCAO, DUVIDA, SEGURANCA, ELOGIO, OUTROS }
@@ -25,18 +26,24 @@ public class Chamado {
     public Chamado(UUID id, String unidadeTexto, String moradorSolicitante, CategoriaChamado categoria, 
                    String assunto, String descricao, StatusChamado status, 
                    LocalDateTime dataAbertura, LocalDateTime dataResolucao, boolean escaladoSindico) {
-        this(id, unidadeTexto, moradorSolicitante, categoria, assunto, descricao, status, dataAbertura, dataResolucao, escaladoSindico, null, null);
+        this(id, unidadeTexto, moradorSolicitante, categoria, assunto, descricao, status, dataAbertura, dataResolucao, escaladoSindico, null, null, null);
     }
 
     public Chamado(UUID id, String unidadeTexto, String moradorSolicitante, CategoriaChamado categoria, 
                    String assunto, String descricao, StatusChamado status, 
                    LocalDateTime dataAbertura, LocalDateTime dataResolucao, boolean escaladoSindico, String fotoAnexo) {
-        this(id, unidadeTexto, moradorSolicitante, categoria, assunto, descricao, status, dataAbertura, dataResolucao, escaladoSindico, fotoAnexo, null);
+        this(id, unidadeTexto, moradorSolicitante, categoria, assunto, descricao, status, dataAbertura, dataResolucao, escaladoSindico, fotoAnexo, null, null);
     }
 
     public Chamado(UUID id, String unidadeTexto, String moradorSolicitante, CategoriaChamado categoria, 
                    String assunto, String descricao, StatusChamado status, 
                    LocalDateTime dataAbertura, LocalDateTime dataResolucao, boolean escaladoSindico, String fotoAnexo, String notaPortaria) {
+        this(id, unidadeTexto, moradorSolicitante, categoria, assunto, descricao, status, dataAbertura, dataResolucao, escaladoSindico, fotoAnexo, notaPortaria, null);
+    }
+
+    public Chamado(UUID id, String unidadeTexto, String moradorSolicitante, CategoriaChamado categoria, 
+                   String assunto, String descricao, StatusChamado status, 
+                   LocalDateTime dataAbertura, LocalDateTime dataResolucao, boolean escaladoSindico, String fotoAnexo, String notaPortaria, UUID usuarioId) {
         this.id = id;
         this.unidadeTexto = unidadeTexto;
         this.moradorSolicitante = moradorSolicitante;
@@ -49,6 +56,7 @@ public class Chamado {
         this.escaladoSindico = escaladoSindico;
         this.fotoAnexo = fotoAnexo;
         this.notaPortaria = notaPortaria;
+        this.usuarioId = usuarioId;
     }
 
     public static Chamado abrir(String unidadeTexto, String moradorSolicitante, 
@@ -59,7 +67,13 @@ public class Chamado {
     public static Chamado abrir(String unidadeTexto, String moradorSolicitante, 
                                 CategoriaChamado categoria, String assunto, String descricao, String fotoAnexo) {
         return new Chamado(UUID.randomUUID(), unidadeTexto, moradorSolicitante, categoria, 
-                           assunto, descricao, StatusChamado.ABERTO, LocalDateTime.now(), null, false, fotoAnexo, null);
+                           assunto, descricao, StatusChamado.ABERTO, LocalDateTime.now(), null, false, fotoAnexo, null, null);
+    }
+
+    public void vincularUsuario(UUID usuarioId) {
+        if (usuarioId != null) {
+            this.usuarioId = usuarioId;
+        }
     }
 
     public void iniciarAtendimento() {
@@ -96,4 +110,5 @@ public class Chamado {
     public boolean isEscaladoSindico() { return escaladoSindico; }
     public String getFotoAnexo() { return fotoAnexo; }
     public String getNotaPortaria() { return notaPortaria; }
+    public UUID getUsuarioId() { return usuarioId; }
 }
