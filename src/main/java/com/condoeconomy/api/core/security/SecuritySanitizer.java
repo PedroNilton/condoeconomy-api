@@ -16,7 +16,7 @@ public final class SecuritySanitizer {
 
     // Padrões de XSS e scripts maliciosos
     private static final Pattern SCRIPT_PATTERN = Pattern.compile(
-            "(?i)<script|javascript:|vbscript:|onload\\s*=|onerror\\s*=|onclick\\s*=|<iframe|<object|<embed|<svg.*onload"
+            "(?i)<script|javascript:|vbscript:|data:text/html|onload\\s*=|onerror\\s*=|onclick\\s*=|onmouseover\\s*=|onfocus\\s*=|srcdoc\\s*=|<iframe|<object|<embed|<svg.*onload"
     );
 
     // Padrões de SQL Injection comuns

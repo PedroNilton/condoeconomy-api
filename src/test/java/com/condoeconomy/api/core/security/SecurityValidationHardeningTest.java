@@ -6,9 +6,12 @@ import com.condoeconomy.api.core.tenant.TenantContext;
 import com.condoeconomy.api.core.tenant.TenantFilter;
 import com.condoeconomy.api.core.tenant.TenantIdentifierResolver;
 import com.condoeconomy.api.infrastructure.persistence.entity.UsuarioJpaEntity;
+import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataPushSubscriptionRepository;
 import com.condoeconomy.api.infrastructure.persistence.repository.SpringDataUsuarioRepository;
 import com.condoeconomy.api.presentation.controller.AuthController;
+import com.condoeconomy.api.presentation.controller.push.PushSubscriptionController;
 import com.condoeconomy.api.presentation.controller.webhook.WebhookAsaasController;
+import com.condoeconomy.api.presentation.dto.push.PushSubscriptionRequestDTO;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.AfterEach;
@@ -536,5 +539,106 @@ class SecurityValidationHardeningTest {
         var respFlood = authController.recuperarSenha(dtoRecuperacao, request);
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, respFlood.getStatusCode());
         verify(recoveryService, times(5)).solicitarRecuperacao("usuario@habitos.com", "198.51.100.42");
+    }
+
+    // ==================== Hardening Extra: Prod Guard, Anti-SSRF, Webhook UUID & XSS ====================
+
+    @Test
+    @DisplayName("TokenService (Prod Guard): bloqueia chave padrão de produção versionada no repositório")
+    void deveBloquearChavePadraoDeProducaoVersionadaNoRepositorio() {
+        TokenService prodService = new TokenService();
+        ReflectionTestUtils.setField(prodService, "secret", "chave-secreta-de-producao-com-mais-de-32-caracteres-256bits");
+        ReflectionTestUtils.setField(prodService, "activeProfile", "prod");
+
+        assertThrows(IllegalStateException.class, prodService::validarSecret);
+    }
+
+    @Test
+    @DisplayName("Web Push (Anti-SSRF CWE-918): bloqueia endpoints internos/privados/cloud-metadata e aceita HTTPS público")
+    void deveBloquearEndpointsSsrfNoWebPushEAceitarProviderPublico() {
+        SpringDataPushSubscriptionRepository pushRepo = mock(SpringDataPushSubscriptionRepository.class);
+        PushSubscriptionController pushController = new PushSubscriptionController(pushRepo);
+
+        UsuarioJpaEntity morador = new UsuarioJpaEntity();
+        morador.setId(UUID.randomUUID());
+        morador.setEmail("morador.push@habitos.com");
+        var auth = new UsernamePasswordAuthenticationToken(morador, null, List.of());
+
+        List<String> endpointsMaliciosos = List.of(
+                "http://fcm.googleapis.com/fcm/send/abc",
+                "https://localhost:8080/actuator/env",
+                "https://127.0.0.1/internal",
+                "https://169.254.169.254/latest/meta-data/iam",
+                "https://10.0.0.5/admin",
+                "https://172.16.0.1/secret",
+                "https://192.168.1.1/router",
+                "https://[::1]/internal",
+                "https://[fd00::1]/internal",
+                "https://metadata.google.internal/computeMetadata/v1/",
+                "https://user:pass@fcm.googleapis.com/fcm/send/abc"
+        );
+
+        for (String endpointInseguro : endpointsMaliciosos) {
+            PushSubscriptionRequestDTO dto = new PushSubscriptionRequestDTO();
+            dto.setEndpoint(endpointInseguro);
+            PushSubscriptionRequestDTO.Keys keys = new PushSubscriptionRequestDTO.Keys();
+            keys.setP256dh("BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM");
+            keys.setAuth("tBHItJI5svbpez7KI4CCXg");
+            dto.setKeys(keys);
+
+            assertThrows(IllegalArgumentException.class, () -> pushController.subscribe(auth, dto),
+                    "Endpoint SSRF deveria ter sido bloqueado: " + endpointInseguro);
+        }
+        verify(pushRepo, never()).save(any());
+
+        PushSubscriptionRequestDTO dtoValido = new PushSubscriptionRequestDTO();
+        dtoValido.setEndpoint("https://fcm.googleapis.com/fcm/send/valid-subscription-token");
+        PushSubscriptionRequestDTO.Keys keysValidas = new PushSubscriptionRequestDTO.Keys();
+        keysValidas.setP256dh("BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM");
+        keysValidas.setAuth("tBHItJI5svbpez7KI4CCXg");
+        dtoValido.setKeys(keysValidas);
+
+        var resp = pushController.subscribe(auth, dtoValido);
+        assertEquals(HttpStatus.OK, resp.getStatusCode());
+        verify(pushRepo, times(1)).save(any());
+    }
+
+    @Test
+    @DisplayName("Webhook Asaas: rejeita externalReference malformado com HTTP 400 sem envenenar cache de idempotência")
+    void deveRejeitarExternalReferenceMalformadoSemEnvenenarIdempotencia() {
+        DarBaixaBoletoUseCase darBaixaUseCase = mock(DarBaixaBoletoUseCase.class);
+        WebhookAsaasController controller = new WebhookAsaasController(darBaixaUseCase, "segredo-asaas-super-forte");
+
+        Map<String, Object> payloadMalformado = Map.of(
+                "event", "PAYMENT_RECEIVED",
+                "payment", Map.of("id", "pay_cache_test", "externalReference", "nao-e-um-uuid-valido")
+        );
+
+        var respInvalida = controller.receberWebhookPagamento("segredo-asaas-super-forte", payloadMalformado);
+        assertEquals(HttpStatus.BAD_REQUEST, respInvalida.getStatusCode());
+        verify(darBaixaUseCase, never()).executar(any());
+
+        // Mesmo payment.id com UUID válido em seguida ainda deve ser processado (cache não foi envenenado)
+        UUID boletoValido = UUID.randomUUID();
+        Map<String, Object> payloadValido = Map.of(
+                "event", "PAYMENT_RECEIVED",
+                "payment", Map.of("id", "pay_cache_test", "externalReference", boletoValido.toString())
+        );
+        var respValida = controller.receberWebhookPagamento("segredo-asaas-super-forte", payloadValido);
+        assertEquals(HttpStatus.OK, respValida.getStatusCode());
+        verify(darBaixaUseCase, times(1)).executar(boletoValido);
+    }
+
+    @Test
+    @DisplayName("SecuritySanitizer: bloqueia vetores XSS estendidos (onmouseover, onfocus, srcdoc e data:text/html)")
+    void deveBloquearVetoresXssEstendidosNoSanitizer() {
+        assertThrows(IllegalArgumentException.class, () ->
+                SecuritySanitizer.validarTextoSeguro("<div onmouseover=alert(1)>hover</div>", "mensagem"));
+        assertThrows(IllegalArgumentException.class, () ->
+                SecuritySanitizer.validarTextoSeguro("<input onfocus=alert(1) autofocus>", "titulo"));
+        assertThrows(IllegalArgumentException.class, () ->
+                SecuritySanitizer.validarTextoSeguro("<iframe srcdoc=\"<script>alert(1)</script>\">", "descricao"));
+        assertThrows(IllegalArgumentException.class, () ->
+                SecuritySanitizer.validarTextoSeguro("data:text/html;base64,PHNjcmlwdD4=", "anexo"));
     }
 }

@@ -14,7 +14,7 @@ API RESTful e servidor WebSocket/STOMP da plataforma **HabitOS / CondoEconomy**,
 - **SpringDoc OpenAPI 3 (`2.3.0`)** para documentação interativa (Swagger UI)
 - **Notificações Push:** Web Push (`nl.martijndwars:web-push` + `BouncyCastle` VAPID) e **Firebase Admin SDK (`9.2.0`)** com fallback local seguro
 - **Gateway Financeiro:** Integração nativa com **Asaas API v3** + contingência automática em modo local
-- **JUnit 5 & Mockito** (`64` testes automatizados cobrindo segurança, validação, domínio e fluxos operacionais)
+- **JUnit 5 & Mockito** (`68` testes automatizados cobrindo segurança, validação, domínio e fluxos operacionais)
 
 ---
 
@@ -88,7 +88,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 *(O Flyway aplicará automaticamente as migrations `V1` a `V34` na inicialização.)*
 
-3. Execute a suíte completa de testes automatizados (`64` testes):
+3. Execute a suíte completa de testes automatizados (`68` testes):
 ```bash
 mvn test
 ```

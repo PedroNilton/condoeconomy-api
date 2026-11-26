@@ -52,24 +52,36 @@ public class WebhookAsaasController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
-        String event = (String) payload.get("event");
-        
+        if (payload == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Object eventObj = payload.get("event");
+        String event = eventObj instanceof String s ? s : null;
+
         if ("PAYMENT_RECEIVED".equals(event)) {
-            Map<String, Object> payment = (Map<String, Object>) payload.get("payment");
-            if (payment != null) {
-                String externalReference = (String) payment.get("externalReference");
-                String paymentId = payment.get("id") != null ? String.valueOf(payment.get("id")) : externalReference;
-                if (externalReference != null) {
+            Object paymentObj = payload.get("payment");
+            if (paymentObj instanceof Map<?, ?> payment) {
+                Object extRefObj = payment.get("externalReference");
+                String externalReference = extRefObj instanceof String s ? s.trim() : null;
+                String paymentId = payment.get("id") != null ? String.valueOf(payment.get("id")).trim() : externalReference;
+                if (externalReference != null && !externalReference.isBlank()) {
+                    UUID boletoId;
+                    try {
+                        boletoId = UUID.fromString(externalReference);
+                    } catch (IllegalArgumentException e) {
+                        return ResponseEntity.badRequest().build();
+                    }
                     String chaveIdempotencia = event + ":" + paymentId;
                     if (!eventosProcessados.add(chaveIdempotencia)) {
                         // Evento duplicado/replay: retorna 200 OK de forma idempotente sem reprocessar baixa
                         return ResponseEntity.ok().build();
                     }
-                    darBaixaBoletoUseCase.executar(UUID.fromString(externalReference));
+                    darBaixaBoletoUseCase.executar(boletoId);
                 }
             }
         }
-        
+
         return ResponseEntity.ok().build();
     }
 

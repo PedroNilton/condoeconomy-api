@@ -36,9 +36,12 @@ public class TokenService {
         if (secret == null || secret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 32) {
             throw new IllegalStateException("api.security.token.secret deve ter pelo menos 32 caracteres. Defina a variável de ambiente JWT_SECRET.");
         }
-        if (secret.contains("dev-only")) {
-            if (activeProfile != null && activeProfile.toLowerCase().contains("prod")) {
-                throw new IllegalStateException("BLOQUEIO DE SEGURANÇA: Não é permitido iniciar em produção (profile 'prod') com a chave JWT padrão de desenvolvimento.");
+        String secretLower = secret.toLowerCase(java.util.Locale.ROOT);
+        boolean chavePadraoInsegura = secretLower.contains("dev-only")
+                || secretLower.contains("chave-secreta-de-producao");
+        if (chavePadraoInsegura) {
+            if (activeProfile != null && activeProfile.toLowerCase(java.util.Locale.ROOT).contains("prod")) {
+                throw new IllegalStateException("BLOQUEIO DE SEGURANÇA: Não é permitido iniciar em produção (profile 'prod') com uma chave JWT padrão de repositório. Defina JWT_SECRET.");
             }
             log.warn("ATENÇÃO: usando a chave JWT padrão de desenvolvimento. Defina JWT_SECRET antes de ir para produção.");
         }
